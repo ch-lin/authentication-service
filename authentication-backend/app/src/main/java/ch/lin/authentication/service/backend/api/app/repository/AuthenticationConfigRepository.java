@@ -41,7 +41,7 @@ import ch.lin.authentication.service.backend.api.domain.model.AuthenticationConf
  * for managing authentication configurations in the database.
  */
 @Repository
-public interface AuthenticationConfigRepository extends JpaRepository<AuthenticationConfig, String> {
+public interface AuthenticationConfigRepository extends JpaRepository<AuthenticationConfig, Long> {
 
     /**
      * Deletes all records from the authentication_config table.

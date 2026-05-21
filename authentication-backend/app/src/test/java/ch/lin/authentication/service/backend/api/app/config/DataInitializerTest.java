@@ -120,7 +120,7 @@ class DataInitializerTest {
     void initAdminUser_SkipWhenExists() throws Exception {
         // Given
         ReflectionTestUtils.setField(dataInitializer, "adminPassword", "admin123");
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(new User()));
+        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(User.builder().build()));
 
         // When
         dataInitializer.initData().run();
@@ -243,7 +243,7 @@ class DataInitializerTest {
         // Given
         String clientId = "existing-id";
         ReflectionTestUtils.setField(dataInitializer, "downloaderClientId", clientId);
-        when(clientRepository.findByClientId(clientId)).thenReturn(Optional.of(new Client()));
+        when(clientRepository.findByClientId(clientId)).thenReturn(Optional.of(Client.builder().build()));
 
         // When
         dataInitializer.initData().run();
@@ -259,7 +259,7 @@ class DataInitializerTest {
         // Given
         String clientId = "existing-hub-id";
         ReflectionTestUtils.setField(dataInitializer, "hubClientId", clientId);
-        when(clientRepository.findByClientId(clientId)).thenReturn(Optional.of(new Client()));
+        when(clientRepository.findByClientId(clientId)).thenReturn(Optional.of(Client.builder().build()));
 
         // When
         dataInitializer.initData().run();
@@ -275,7 +275,7 @@ class DataInitializerTest {
         // Given
         String clientId = "existing-postman-id";
         ReflectionTestUtils.setField(dataInitializer, "postmanClientId", clientId);
-        when(clientRepository.findByClientId(clientId)).thenReturn(Optional.of(new Client()));
+        when(clientRepository.findByClientId(clientId)).thenReturn(Optional.of(Client.builder().build()));
 
         // When
         dataInitializer.initData().run();
@@ -289,7 +289,7 @@ class DataInitializerTest {
     @DisplayName("Should create Default Config when not exists")
     void initDefaultConfig_Success() throws Exception {
         // Given
-        when(authConfigRepository.findById("default")).thenReturn(Optional.empty());
+        when(authConfigRepository.findByName("default")).thenReturn(Optional.empty());
 
         // When
         dataInitializer.initData().run();
@@ -309,7 +309,7 @@ class DataInitializerTest {
     @DisplayName("Should skip Default Config creation when exists")
     void initDefaultConfig_SkipWhenExists() throws Exception {
         // Given
-        when(authConfigRepository.findById("default")).thenReturn(Optional.of(new AuthenticationConfig()));
+        when(authConfigRepository.findByName("default")).thenReturn(Optional.of(AuthenticationConfig.builder().build()));
 
         // When
         dataInitializer.initData().run();

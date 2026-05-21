@@ -26,25 +26,29 @@ package ch.lin.authentication.service.backend.api.domain.model;
 import java.util.Collection;
 import java.util.List;
 
+import org.hibernate.annotations.ColumnDefault;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import static ch.lin.authentication.service.backend.api.domain.model.User.TABLE_NAME;
+import ch.lin.platform.domain.model.AuditableEntity;
+import ch.lin.platform.domain.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Represents a user in the system.
@@ -53,14 +57,17 @@ import lombok.Setter;
  * Spring Security's {@link UserDetails} interface to integrate with the
  * authentication framework.
  */
-@Table(name = TABLE_NAME)
 @Entity
+@Table(name = TABLE_NAME, indexes = {
+    @Index(name = User.ID_INDEX, columnList = BaseEntity.ID_COLUMN),
+    @Index(name = User.EMAIL_INDEX, columnList = User.EMAIL_COLUMN)}, uniqueConstraints = {
+    @UniqueConstraint(columnNames = User.EMAIL_COLUMN)})
 @Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(of = {"id", "firstname", "lastname", "email", "password", "role"}, callSuper = false)
-public class User implements UserDetails {
+@EqualsAndHashCode(of = {"email"}, callSuper = false)
+@SuperBuilder(toBuilder = true)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class User extends AuditableEntity implements UserDetails {
 
     /**
      * The serialization version UID for this class.
@@ -73,24 +80,54 @@ public class User implements UserDetails {
     public static final String TABLE_NAME = "user";
 
     /**
-     * The unique identifier for the user (primary key).
+     * The name of the index for the ID column.
      */
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    public static final String ID_INDEX = "user_id_index";
+
+    /**
+     * The name of the index for the email column.
+     */
+    public static final String EMAIL_INDEX = "user_email_index";
+
+    /**
+     * The name of the first name column in the database.
+     */
+    public static final String FIRSTNAME_COLUMN = "firstname";
+
+    /**
+     * The name of the last name column in the database.
+     */
+    public static final String LASTNAME_COLUMN = "lastname";
+
+    /**
+     * The name of the email column in the database.
+     */
+    public static final String EMAIL_COLUMN = "email";
+
+    /**
+     * The name of the password column in the database.
+     */
+    public static final String PASSWORD_COLUMN = "password";
+
+    /**
+     * The name of the role column in the database.
+     */
+    public static final String ROLE_COLUMN = "role";
 
     /**
      * The user's first name.
      */
     @NotNull
-    @Column(nullable = false)
+    @Column(name = User.FIRSTNAME_COLUMN, nullable = false)
+    @Setter
     private String firstname;
 
     /**
      * The user's last name.
      */
     @NotNull
-    @Column(nullable = false)
+    @Column(name = User.LASTNAME_COLUMN, nullable = false)
+    @Setter
     private String lastname;
 
     /**
@@ -98,14 +135,14 @@ public class User implements UserDetails {
      * authentication.
      */
     @NotNull
-    @Column(nullable = false, unique = true)
+    @Column(name = User.EMAIL_COLUMN, nullable = false, unique = true)
     private String email;
 
     /**
      * The user's hashed password.
      */
     @NotNull
-    @Column(nullable = false)
+    @Column(name = User.PASSWORD_COLUMN, nullable = false)
     private String password;
 
     /**
@@ -113,8 +150,10 @@ public class User implements UserDetails {
      */
     @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role;
+    @ColumnDefault("'USER'")
+    @Column(name = User.ROLE_COLUMN, nullable = false)
+    @lombok.Builder.Default
+    private Role role = Role.USER;
 
     /**
      * Returns the authorities granted to the user. In this implementation, it's
@@ -184,5 +223,18 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    /**
+     * Updates the role of this user.
+     *
+     * @param newRole The new role to assign. Cannot be null.
+     * @throws IllegalArgumentException if newRole is null.
+     */
+    public void updateRole(Role newRole) {
+        if (newRole == null) {
+            throw new IllegalArgumentException("User role cannot be null.");
+        }
+        this.role = newRole;
     }
 }

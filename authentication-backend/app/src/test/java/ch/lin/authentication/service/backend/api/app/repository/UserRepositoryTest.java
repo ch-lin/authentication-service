@@ -46,12 +46,13 @@ class UserRepositoryTest {
     @Test
     void findByEmail_ShouldReturnUser_WhenUserExists() {
         // Arrange
-        User user = new User();
-        user.setEmail("test@example.com");
-        user.setFirstname("John");
-        user.setLastname("Doe");
-        user.setPassword("password");
-        user.setRole(Role.USER);
+        User user = User.builder()
+                .email("test@example.com")
+                .firstname("John")
+                .lastname("Doe")
+                .password("password")
+                .role(Role.USER)
+                .build();
         entityManager.persist(user);
         entityManager.flush();
 
@@ -71,12 +72,13 @@ class UserRepositoryTest {
 
     @Test
     void cleanTable_ShouldRemoveAllUsers() {
-        User user = new User();
-        user.setEmail("cleanup@example.com");
-        user.setFirstname("Cleanup");
-        user.setLastname("User");
-        user.setPassword("password");
-        user.setRole(Role.USER);
+        User user = User.builder()
+                .email("cleanup@example.com")
+                .firstname("Cleanup")
+                .lastname("User")
+                .password("password")
+                .role(Role.USER)
+                .build();
         entityManager.persist(user);
         entityManager.flush();
 

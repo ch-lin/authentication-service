@@ -132,7 +132,13 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      */
     @Override
     public JwtToken register(String firstname, String lastname, String email, String password, Role role) {
-        User user = new User(null, firstname, lastname, email, passwordEncoder.encode(password), role);
+        User user = User.builder()
+                .firstname(firstname)
+                .lastname(lastname)
+                .email(email)
+                .password(passwordEncoder.encode(password))
+                .role(role)
+                .build();
         userRepository.save(user);
         JwtToken jwtToken = generateToken(user);
         return jwtToken;

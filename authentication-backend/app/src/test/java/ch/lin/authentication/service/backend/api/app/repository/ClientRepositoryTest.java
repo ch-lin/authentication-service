@@ -46,11 +46,12 @@ class ClientRepositoryTest {
     @Test
     void findByClientId_ShouldReturnClient_WhenExists() {
         // Arrange
-        Client client = new Client();
-        client.setClientId("client-123");
-        client.setClientName("Test Client");
-        client.setClientSecret("secret");
-        client.setRole(Role.SERVICE);
+        Client client = Client.builder()
+                .clientId("client-123")
+                .clientName("Test Client")
+                .clientSecret("secret")
+                .role(Role.SERVICE)
+                .build();
         entityManager.persist(client);
         entityManager.flush();
 
@@ -70,11 +71,12 @@ class ClientRepositoryTest {
 
     @Test
     void cleanTable_ShouldRemoveAllClients() {
-        Client client = new Client();
-        client.setClientId("cleanup-client");
-        client.setClientName("Cleanup Client");
-        client.setClientSecret("secret");
-        client.setRole(Role.SERVICE);
+        Client client = Client.builder()
+                .clientId("cleanup-client")
+                .clientName("Cleanup Client")
+                .clientSecret("secret")
+                .role(Role.SERVICE)
+                .build();
         entityManager.persist(client);
         entityManager.flush();
 

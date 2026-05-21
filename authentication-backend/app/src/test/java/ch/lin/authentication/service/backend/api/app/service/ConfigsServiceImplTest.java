@@ -72,12 +72,13 @@ class ConfigsServiceImplTest {
     @BeforeEach
     @SuppressWarnings("unused")
     void setUp() {
-        defaultConfig = new AuthenticationConfig();
-        defaultConfig.setName("default");
-        defaultConfig.setEnabled(true);
-        defaultConfig.setJwtExpiration(3600L);
-        defaultConfig.setJwtRefreshExpiration(7200L);
-        defaultConfig.setJwtIssuerUri("http://test");
+        defaultConfig = AuthenticationConfig.builder()
+                .name("default")
+                .enabled(true)
+                .jwtExpiration(3600L)
+                .jwtRefreshExpiration(7200L)
+                .jwtIssuerUri("http://test")
+                .build();
     }
 
     @Test
@@ -98,9 +99,10 @@ class ConfigsServiceImplTest {
 
     @Test
     void getAllConfigs_ShouldReturnConfigs_WhenDbNotEmpty() {
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName("custom");
-        config.setEnabled(true);
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name("custom")
+                .enabled(true)
+                .build();
 
         when(authenticationConfigRepository.count()).thenReturn(1L);
         when(authenticationConfigRepository.findAll()).thenReturn(List.of(config));
@@ -138,7 +140,7 @@ class ConfigsServiceImplTest {
     void createConfig_ShouldThrow_WhenConfigExists() {
         CreateConfigCommand command = mock(CreateConfigCommand.class);
         when(command.getName()).thenReturn("existing");
-        when(authenticationConfigRepository.findByName("existing")).thenReturn(Optional.of(new AuthenticationConfig()));
+        when(authenticationConfigRepository.findByName("existing")).thenReturn(Optional.of(AuthenticationConfig.builder().name("existing").build()));
 
         assertThatThrownBy(() -> configsService.createConfig(command))
                 .isInstanceOf(InvalidRequestException.class)
@@ -152,9 +154,10 @@ class ConfigsServiceImplTest {
         when(command.getEnabled()).thenReturn(true);
 
         when(authenticationConfigRepository.findByName("new")).thenReturn(Optional.empty());
-        AuthenticationConfig otherConfig = new AuthenticationConfig();
-        otherConfig.setName("other");
-        otherConfig.setEnabled(true);
+        AuthenticationConfig otherConfig = AuthenticationConfig.builder()
+                .name("other")
+                .enabled(true)
+                .build();
         when(authenticationConfigRepository.findAllByEnabledTrue()).thenReturn(List.of(otherConfig));
         when(authenticationConfigRepository.save(Objects.requireNonNull(anyAuthenticationConfig()))).thenAnswer(i -> i.getArguments()[0]);
 
@@ -198,8 +201,9 @@ class ConfigsServiceImplTest {
     @Test
     void deleteConfig_ShouldDeleteAndEnableDefault_WhenNoOthersEnabled() {
         String configName = "toDelete";
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName(configName);
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name(configName)
+                .build();
         when(authenticationConfigRepository.findByName(configName)).thenReturn(Optional.of(config));
         when(authenticationConfigRepository.findAllByEnabledTrue()).thenReturn(Collections.emptyList());
 
@@ -227,13 +231,15 @@ class ConfigsServiceImplTest {
     @Test
     void deleteConfig_ShouldNotEnableDefault_WhenOtherConfigsEnabled() {
         String configName = "toDelete";
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName(configName);
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name(configName)
+                .build();
         when(authenticationConfigRepository.findByName(configName)).thenReturn(Optional.of(config));
 
-        AuthenticationConfig otherConfig = new AuthenticationConfig();
-        otherConfig.setName("other");
-        otherConfig.setEnabled(true);
+        AuthenticationConfig otherConfig = AuthenticationConfig.builder()
+                .name("other")
+                .enabled(true)
+                .build();
         when(authenticationConfigRepository.findAllByEnabledTrue()).thenReturn(List.of(otherConfig));
 
         configsService.deleteConfig(configName);
@@ -245,8 +251,9 @@ class ConfigsServiceImplTest {
     @Test
     void deleteConfig_ShouldNotSaveDefault_WhenDefaultAlreadyEnabled() {
         String configName = "toDelete";
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName(configName);
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name(configName)
+                .build();
         when(authenticationConfigRepository.findByName(configName)).thenReturn(Optional.of(config));
         when(authenticationConfigRepository.findAllByEnabledTrue()).thenReturn(Collections.emptyList());
 
@@ -263,9 +270,10 @@ class ConfigsServiceImplTest {
     @Test
     void getResolvedConfig_ShouldReturnConfig_WhenExists() {
         String configName = "custom";
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName(configName);
-        config.setJwtExpiration(100L);
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name(configName)
+                .jwtExpiration(100L)
+                .build();
 
         when(authenticationConfigRepository.findByName(configName)).thenReturn(Optional.of(config));
         when(defaultConfigFactory.create(defaultProperties)).thenReturn(defaultConfig);
@@ -311,9 +319,10 @@ class ConfigsServiceImplTest {
 
     @Test
     void getResolvedConfig_ShouldReturnEnabledConfig_WhenNameIsNull() {
-        AuthenticationConfig enabledConfig = new AuthenticationConfig();
-        enabledConfig.setName("enabled");
-        enabledConfig.setEnabled(true);
+        AuthenticationConfig enabledConfig = AuthenticationConfig.builder()
+                .name("enabled")
+                .enabled(true)
+                .build();
 
         when(authenticationConfigRepository.findFirstByEnabledTrue()).thenReturn(Optional.of(enabledConfig));
         when(defaultConfigFactory.create(defaultProperties)).thenReturn(defaultConfig);
@@ -326,12 +335,13 @@ class ConfigsServiceImplTest {
     @Test
     void getResolvedConfig_ShouldNotOverwriteFields_WhenDbConfigIsComplete() {
         String configName = "complete";
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName(configName);
-        config.setEnabled(true);
-        config.setJwtExpiration(111L);
-        config.setJwtRefreshExpiration(222L);
-        config.setJwtIssuerUri("http://db-issuer");
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name(configName)
+                .enabled(true)
+                .jwtExpiration(111L)
+                .jwtRefreshExpiration(222L)
+                .jwtIssuerUri("http://db-issuer")
+                .build();
 
         when(authenticationConfigRepository.findByName(configName)).thenReturn(Optional.of(config));
         when(defaultConfigFactory.create(defaultProperties)).thenReturn(defaultConfig);
@@ -347,9 +357,11 @@ class ConfigsServiceImplTest {
     @Test
     void getResolvedConfig_ShouldFillAllFields_WhenDbConfigIsEmpty() {
         String configName = "empty";
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName(configName);
-        // All fields null
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name(configName)
+                .enabled(null)
+                .build();
+        // All fields are null, explicitly bypassing Builder.Default for enabled
 
         when(authenticationConfigRepository.findByName(configName)).thenReturn(Optional.of(config));
         when(defaultConfigFactory.create(defaultProperties)).thenReturn(defaultConfig);
@@ -365,8 +377,9 @@ class ConfigsServiceImplTest {
     @Test
     void getConfig_ShouldReturnConfig_WhenExists() {
         String configName = "existing";
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName(configName);
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name(configName)
+                .build();
         when(authenticationConfigRepository.findByName(configName)).thenReturn(Optional.of(config));
 
         AuthenticationConfig result = configsService.getConfig(configName);
@@ -401,9 +414,10 @@ class ConfigsServiceImplTest {
         when(command.getName()).thenReturn("existing");
         when(command.getEnabled()).thenReturn(true);
 
-        AuthenticationConfig existing = new AuthenticationConfig();
-        existing.setName("existing");
-        existing.setEnabled(false);
+        AuthenticationConfig existing = AuthenticationConfig.builder()
+                .name("existing")
+                .enabled(false)
+                .build();
 
         when(authenticationConfigRepository.findByName("existing")).thenReturn(Optional.of(existing));
         when(authenticationConfigRepository.save(Objects.requireNonNull(anyAuthenticationConfig()))).thenAnswer(i -> i.getArguments()[0]);
@@ -437,15 +451,17 @@ class ConfigsServiceImplTest {
         when(command.getName()).thenReturn("targetConfig");
         when(command.getEnabled()).thenReturn(true);
 
-        AuthenticationConfig otherConfig = new AuthenticationConfig();
-        otherConfig.setName("otherConfig");
-        otherConfig.setEnabled(true);
+        AuthenticationConfig otherConfig = AuthenticationConfig.builder()
+                .name("otherConfig")
+                .enabled(true)
+                .build();
 
         when(authenticationConfigRepository.findAllByEnabledTrue()).thenReturn(List.of(otherConfig));
 
-        AuthenticationConfig targetConfig = new AuthenticationConfig();
-        targetConfig.setName("targetConfig");
-        targetConfig.setEnabled(false);
+        AuthenticationConfig targetConfig = AuthenticationConfig.builder()
+                .name("targetConfig")
+                .enabled(false)
+                .build();
         when(authenticationConfigRepository.findByName("targetConfig")).thenReturn(Optional.of(targetConfig));
 
         when(authenticationConfigRepository.save(Objects.requireNonNull(anyAuthenticationConfig()))).thenAnswer(i -> i.getArguments()[0]);
@@ -465,12 +481,13 @@ class ConfigsServiceImplTest {
         when(command.getJwtRefreshExpiration()).thenReturn(10000L);
         when(command.getJwtIssuerUri()).thenReturn("http://new-issuer");
 
-        AuthenticationConfig existing = new AuthenticationConfig();
-        existing.setName("existing");
-        existing.setEnabled(false);
-        existing.setJwtExpiration(1000L);
-        existing.setJwtRefreshExpiration(2000L);
-        existing.setJwtIssuerUri("http://old-issuer");
+        AuthenticationConfig existing = AuthenticationConfig.builder()
+                .name("existing")
+                .enabled(false)
+                .jwtExpiration(1000L)
+                .jwtRefreshExpiration(2000L)
+                .jwtIssuerUri("http://old-issuer")
+                .build();
 
         when(authenticationConfigRepository.findByName("existing")).thenReturn(Optional.of(existing));
         when(authenticationConfigRepository.save(Objects.requireNonNull(anyAuthenticationConfig()))).thenAnswer(i -> i.getArguments()[0]);
@@ -493,12 +510,13 @@ class ConfigsServiceImplTest {
         when(command.getJwtRefreshExpiration()).thenReturn(null);
         when(command.getJwtIssuerUri()).thenReturn(null);
 
-        AuthenticationConfig existing = new AuthenticationConfig();
-        existing.setName("existing");
-        existing.setEnabled(true);
-        existing.setJwtExpiration(1000L);
-        existing.setJwtRefreshExpiration(2000L);
-        existing.setJwtIssuerUri("http://old-issuer");
+        AuthenticationConfig existing = AuthenticationConfig.builder()
+                .name("existing")
+                .enabled(true)
+                .jwtExpiration(1000L)
+                .jwtRefreshExpiration(2000L)
+                .jwtIssuerUri("http://old-issuer")
+                .build();
 
         when(authenticationConfigRepository.findByName("existing")).thenReturn(Optional.of(existing));
         when(authenticationConfigRepository.save(Objects.requireNonNull(anyAuthenticationConfig()))).thenAnswer(i -> i.getArguments()[0]);
@@ -518,9 +536,10 @@ class ConfigsServiceImplTest {
         when(command.getName()).thenReturn("myConfig");
         when(command.getEnabled()).thenReturn(false);
 
-        AuthenticationConfig myConfig = new AuthenticationConfig();
-        myConfig.setName("myConfig");
-        myConfig.setEnabled(true);
+        AuthenticationConfig myConfig = AuthenticationConfig.builder()
+                .name("myConfig")
+                .enabled(true)
+                .build();
 
         when(authenticationConfigRepository.findByName("myConfig")).thenReturn(Optional.of(myConfig));
         when(authenticationConfigRepository.save(Objects.requireNonNull(anyAuthenticationConfig()))).thenAnswer(i -> i.getArguments()[0]);
@@ -538,6 +557,6 @@ class ConfigsServiceImplTest {
 
     private AuthenticationConfig anyAuthenticationConfig() {
         any(AuthenticationConfig.class);
-        return new AuthenticationConfig();
+        return AuthenticationConfig.builder().name("dummy").build();
     }
 }

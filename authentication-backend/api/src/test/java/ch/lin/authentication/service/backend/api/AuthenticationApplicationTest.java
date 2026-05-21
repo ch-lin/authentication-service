@@ -23,26 +23,38 @@
  *===========================================================================*/
 package ch.lin.authentication.service.backend.api;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
-@AutoConfigureTestDatabase
+@TestPropertySource(properties = {
+    "spring.datasource.url=jdbc:h2:mem:auth_test_db;DB_CLOSE_DELAY=-1",
+    "spring.datasource.driver-class-name=org.h2.Driver",
+    "spring.datasource.username=sa",
+    "spring.datasource.password=",
+    "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+    "spring.jpa.hibernate.ddl-auto=create-drop"
+})
 class AuthenticationApplicationTest {
 
     @Test
+    @DisplayName("Should successfully load Spring application context")
     void contextLoads() {
+        // If this test passes, it means all Beans can be successfully initialized,
+        // and there are no conflicts in JPA Entity configurations.
     }
 
     @Test
+    @DisplayName("Should successfully execute main method without starting web server")
     void main() {
+        // Turn off the Web Server via arguments to prevent the test from hanging on port listening,
+        // and also redirect the DB to an in-memory database.
         AuthenticationApplication.main(new String[]{
-            "--server.port=0",
-            "--spring.datasource.url=jdbc:h2:mem:testdb-main",
-            "--spring.datasource.driver-class-name=org.h2.Driver",
-            "--spring.datasource.username=sa",
-            "--spring.datasource.password="
+            "--spring.main.web-application-type=NONE",
+            "--spring.datasource.url=jdbc:h2:mem:auth_main_test_db",
+            "--spring.datasource.driver-class-name=org.h2.Driver"
         });
     }
 }

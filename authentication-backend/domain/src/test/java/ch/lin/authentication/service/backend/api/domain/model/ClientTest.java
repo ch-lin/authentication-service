@@ -23,9 +23,13 @@
  *===========================================================================*/
 package ch.lin.authentication.service.backend.api.domain.model;
 
+import java.time.OffsetDateTime;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,11 +40,12 @@ class ClientTest {
     @DisplayName("Should build client using Builder pattern")
     void testBuilder() {
         // Given
-        Integer id = 1;
+        Long id = 1L;
         String clientName = "Test App";
         String clientId = "client-id-123";
         String clientSecret = "secret-hash";
         Role role = (Role.values().length > 0) ? Role.values()[0] : null;
+        OffsetDateTime now = OffsetDateTime.now();
 
         // When
         Client client = Client.builder()
@@ -49,6 +54,8 @@ class ClientTest {
                 .clientId(clientId)
                 .clientSecret(clientSecret)
                 .role(role)
+                .createdAt(now)
+                .updatedAt(now)
                 .build();
 
         // Then
@@ -57,6 +64,8 @@ class ClientTest {
         assertEquals(clientId, client.getClientId());
         assertEquals(clientSecret, client.getClientSecret());
         assertEquals(role, client.getRole());
+        assertEquals(now, client.getCreatedAt());
+        assertEquals(now, client.getUpdatedAt());
     }
 
     @Test
@@ -76,19 +85,21 @@ class ClientTest {
         // Then
         assertEquals("id-1", modified.getClientId()); // Should remain same
         assertEquals("Modified Name", modified.getClientName()); // Should change
-        assertNotEquals(original, modified);
+        assertEquals("Original Name", original.getClientName()); // Original remains untouched
+        assertEquals(original, modified); // They are logically equal (same clientId)
+        assertNotSame(original, modified); // But they are different instances in memory
     }
 
     @Test
     @DisplayName("Should verify Lombok @Data generated methods (Equals, HashCode, ToString)")
     void testDataMethods() {
         // Given
-        Client client1 = Client.builder().clientId("id").build();
-        Client client2 = Client.builder().clientId("id").build();
+        Client client1 = Client.builder().clientId("id").clientName("A").build();
+        Client client2 = Client.builder().clientId("id").clientName("B").build(); // Same clientId, different name
         Client client3 = Client.builder().clientId("other").build();
 
         // Then
-        // Equals
+        // Equals (should only compare clientId)
         assertEquals(client1, client2);
         assertNotEquals(client1, client3);
 
@@ -99,5 +110,29 @@ class ClientTest {
         // ToString
         assertNotNull(client1.toString());
         assertTrue(client1.toString().contains("clientId=id"));
+    }
+
+    @Test
+    @DisplayName("Should successfully update role")
+    void updateRole_Success() {
+        // Given
+        Client client = Client.builder().role(Role.SERVICE).build();
+
+        // When
+        client.updateRole(Role.ADMIN);
+
+        // Then
+        assertEquals(Role.ADMIN, client.getRole());
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalArgumentException when updating role to null")
+    void updateRole_NullThrowsException() {
+        // Given
+        Client client = Client.builder().role(Role.SERVICE).build();
+
+        // When & Then
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> client.updateRole(null));
+        assertEquals("Client role cannot be null.", exception.getMessage());
     }
 }

@@ -40,7 +40,7 @@ import ch.lin.authentication.service.backend.api.domain.model.Client;
  * managing OAuth 2.0/OIDC clients.
  */
 @Repository
-public interface ClientRepository extends JpaRepository<Client, Integer> {
+public interface ClientRepository extends JpaRepository<Client, Long> {
 
     /**
      * Deletes all records from the 'client' table.

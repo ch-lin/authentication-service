@@ -23,17 +23,24 @@
  *===========================================================================*/
 package ch.lin.authentication.service.backend.api.domain.model;
 
+import org.hibernate.annotations.ColumnDefault;
+
 import static ch.lin.authentication.service.backend.api.domain.model.AuthenticationConfig.TABLE_NAME;
+import ch.lin.platform.domain.model.AuditableEntity;
+import ch.lin.platform.domain.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Represents a configuration profile for the authentication service.
@@ -42,14 +49,17 @@ import lombok.Setter;
  * (JSON Web Token) generation and lifecycle. Multiple configurations can exist,
  * but typically only one is active at a time.
  */
-@Table(name = TABLE_NAME)
 @Entity
+@Table(name = TABLE_NAME, indexes = {
+    @Index(name = AuthenticationConfig.ID_INDEX, columnList = BaseEntity.ID_COLUMN),
+    @Index(name = AuthenticationConfig.NAME_INDEX, columnList = AuthenticationConfig.NAME_COLUMN)}, uniqueConstraints = {
+    @UniqueConstraint(columnNames = AuthenticationConfig.NAME_COLUMN)})
 @Getter
-@Setter
-@NoArgsConstructor // JPA requirement: a no-args constructor
-@AllArgsConstructor
-@EqualsAndHashCode(of = {"name", "enabled", "jwtExpiration", "jwtRefreshExpiration", "jwtIssuerUri"}, callSuper = false)
-public class AuthenticationConfig {
+@EqualsAndHashCode(of = {"name"}, callSuper = false)
+@SuperBuilder(toBuilder = true)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class AuthenticationConfig extends AuditableEntity {
 
     /**
      * The name of the configuration table in the database.
@@ -57,9 +67,19 @@ public class AuthenticationConfig {
     public static final String TABLE_NAME = "authentication_config";
 
     /**
+     * The name of the index for the ID column.
+     */
+    public static final String ID_INDEX = "authentication_config_id_index";
+
+    /**
      * The column name for the configuration's unique name.
      */
     public static final String NAME_COLUMN = "name";
+
+    /**
+     * The name of the index for the name column.
+     */
+    public static final String NAME_INDEX = "auth_config_name_index";
 
     /**
      * The column name for the enabled status.
@@ -84,23 +104,26 @@ public class AuthenticationConfig {
     /**
      * The unique name of the configuration profile, e.g., "default".
      */
-    @Id
     @NotNull
-    @Column(name = AuthenticationConfig.NAME_COLUMN)
+    @Column(name = AuthenticationConfig.NAME_COLUMN, nullable = false)
     private String name;
 
     /**
      * Indicates whether this configuration is the currently active one.
      */
     @NotNull
+    @ColumnDefault("false")
     @Column(name = AuthenticationConfig.ENABLED_COLUMN, nullable = false)
-    private Boolean enabled;
+    @Setter
+    @lombok.Builder.Default
+    private Boolean enabled = false;
 
     /**
      * The expiration time for the JWT access token in milliseconds.
      */
     @NotNull
     @Column(name = AuthenticationConfig.JWT_EXPIRATION_COLUMN, nullable = false)
+    @Setter
     private Long jwtExpiration;
 
     /**
@@ -108,6 +131,7 @@ public class AuthenticationConfig {
      */
     @NotNull
     @Column(name = AuthenticationConfig.JWT_REFRESH_EXPIRATION_COLUMN, nullable = false)
+    @Setter
     private Long jwtRefreshExpiration;
 
     /**
@@ -115,5 +139,16 @@ public class AuthenticationConfig {
      */
     @NotNull
     @Column(name = AuthenticationConfig.JWT_ISSUER_URI_COLUMN, nullable = false)
+    @Setter
     private String jwtIssuerUri;
+
+    /**
+     * Creates a new AuthenticationConfig with the specified name.
+     *
+     * @param name The unique name for this configuration.
+     */
+    public AuthenticationConfig(String name) {
+        this();
+        this.name = name;
+    }
 }

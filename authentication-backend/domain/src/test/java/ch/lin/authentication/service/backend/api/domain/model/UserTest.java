@@ -23,10 +23,12 @@
  *===========================================================================*/
 package ch.lin.authentication.service.backend.api.domain.model;
 
+import java.time.OffsetDateTime;
 import java.util.Collection;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,8 +37,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 class UserTest {
 
-    private final User user = new User();
-
     @Test
     @DisplayName("Should return correct authorities based on role")
     void getAuthorities() {
@@ -44,7 +44,13 @@ class UserTest {
         // We assume Role is an enum in the same package and has at least one value.
         if (Role.values().length > 0) {
             Role testRole = Role.values()[0];
-            user.setRole(testRole);
+            User user = User.builder()
+                    .firstname("John")
+                    .lastname("Doe")
+                    .email("test@example.com")
+                    .password("password123")
+                    .role(testRole)
+                    .build();
 
             // When
             Collection<? extends GrantedAuthority> authorities = user.getAuthorities();
@@ -61,7 +67,12 @@ class UserTest {
     void getUsername() {
         // Given
         String email = "test@example.com";
-        user.setEmail(email);
+        User user = User.builder()
+                .firstname("John")
+                .lastname("Doe")
+                .password("password123")
+                .email(email)
+                .build();
 
         // When
         String username = user.getUsername();
@@ -73,6 +84,13 @@ class UserTest {
     @Test
     @DisplayName("Should return true for all boolean status flags")
     void accountStatusFlags() {
+        User user = User.builder()
+                .firstname("John")
+                .lastname("Doe")
+                .email("test@example.com")
+                .password("password123")
+                .build();
+
         assertTrue(user.isAccountNonExpired());
         assertTrue(user.isAccountNonLocked());
         assertTrue(user.isCredentialsNonExpired());
@@ -80,18 +98,28 @@ class UserTest {
     }
 
     @Test
-    @DisplayName("Should verify Lombok generated methods (Constructors, Getters, Setters, Equals, HashCode)")
+    @DisplayName("Should verify Lombok generated methods (Constructors, Getters, Equals, HashCode)")
     void lombokMethods() {
         // Given
-        Integer id = 1;
+        Long id = 1L;
         String firstname = "John";
         String lastname = "Doe";
         String email = "john.doe@example.com";
         String password = "password123";
         Role role = (Role.values().length > 0) ? Role.values()[0] : null;
+        OffsetDateTime now = OffsetDateTime.now();
 
         // When
-        User fullUser = new User(id, firstname, lastname, email, password, role);
+        User fullUser = User.builder()
+                .id(id)
+                .firstname(firstname)
+                .lastname(lastname)
+                .email(email)
+                .password(password)
+                .role(role)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
 
         // Then
         assertEquals(id, fullUser.getId());
@@ -100,10 +128,45 @@ class UserTest {
         assertEquals(email, fullUser.getEmail());
         assertEquals(password, fullUser.getPassword());
         assertEquals(role, fullUser.getRole());
+        assertEquals(now, fullUser.getCreatedAt());
+        assertEquals(now, fullUser.getUpdatedAt());
 
-        // Test Equals and HashCode
-        User anotherUser = new User(id, firstname, lastname, email, password, role);
+        // Test Equals and HashCode (Should only compare by email)
+        User anotherUser = User.builder()
+                .id(2L) // Different ID
+                .firstname("Different") // Different name
+                .lastname("User")
+                .email(email)
+                .password("different_password")
+                .role(role)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
         assertEquals(fullUser, anotherUser);
         assertEquals(fullUser.hashCode(), anotherUser.hashCode());
+    }
+
+    @Test
+    @DisplayName("Should successfully update role")
+    void updateRole_Success() {
+        // Given
+        User user = User.builder().role(Role.USER).build();
+
+        // When
+        user.updateRole(Role.ADMIN);
+
+        // Then
+        assertEquals(Role.ADMIN, user.getRole());
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalArgumentException when updating role to null")
+    void updateRole_NullThrowsException() {
+        // Given
+        User user = User.builder().role(Role.USER).build();
+
+        // When & Then
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> user.updateRole(null));
+        assertEquals("User role cannot be null.", exception.getMessage());
     }
 }

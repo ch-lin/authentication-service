@@ -101,14 +101,15 @@ public class DataInitializer {
             return;
         }
 
-        User admin = new User();
-        admin.setFirstname(adminFirstname);
-        admin.setLastname(adminLastname);
-        admin.setEmail(adminEmail);
-        admin.setPassword(passwordEncoder.encode(adminPassword));
-        admin.setRole(Role.ADMIN);
+        User admin = User.builder()
+                .firstname(adminFirstname)
+                .lastname(adminLastname)
+                .email(adminEmail)
+                .password(passwordEncoder.encode(adminPassword))
+                .role(Role.ADMIN)
+                .build();
 
-        userRepository.save(admin);
+        userRepository.save(Objects.requireNonNull(admin));
         log.info("✅ Created Admin User: {}", adminEmail);
     }
 
@@ -177,18 +178,19 @@ public class DataInitializer {
 
     private void initDefaultConfig() {
         String configName = "default";
-        if (authConfigRepository.findById(configName).isPresent()) {
+        if (authConfigRepository.findByName(configName).isPresent()) {
             return;
         }
 
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName(configName);
-        config.setEnabled(true);
-        config.setJwtExpiration(jwtExpiration);
-        config.setJwtRefreshExpiration(jwtRefreshExpiration);
-        config.setJwtIssuerUri(jwtIssuerUri);
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name(configName)
+                .enabled(true)
+                .jwtExpiration(jwtExpiration)
+                .jwtRefreshExpiration(jwtRefreshExpiration)
+                .jwtIssuerUri(jwtIssuerUri)
+                .build();
 
-        authConfigRepository.save(config);
+        authConfigRepository.save(Objects.requireNonNull(config));
         log.info("✅ Created Default Authentication Config.");
     }
 }

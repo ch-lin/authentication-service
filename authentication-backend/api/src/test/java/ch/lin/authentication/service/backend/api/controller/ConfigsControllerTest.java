@@ -95,12 +95,13 @@ class ConfigsControllerTest {
     void createConfig_ShouldCreateConfigAndReturnCreated() throws Exception {
         // Given
         CreateConfigRequest request = new CreateConfigRequest("new-config", false, 3600000L, 86400000L, "http://issuer.com");
-        AuthenticationConfig createdConfig = new AuthenticationConfig();
-        createdConfig.setName("new-config");
-        createdConfig.setEnabled(false);
-        createdConfig.setJwtExpiration(3600000L);
-        createdConfig.setJwtRefreshExpiration(86400000L);
-        createdConfig.setJwtIssuerUri("http://issuer.com");
+        AuthenticationConfig createdConfig = AuthenticationConfig.builder()
+                .name("new-config")
+                .enabled(false)
+                .jwtExpiration(3600000L)
+                .jwtRefreshExpiration(86400000L)
+                .jwtIssuerUri("http://issuer.com")
+                .build();
 
         when(configsService.createConfig(any(CreateConfigCommand.class))).thenReturn(createdConfig);
 
@@ -127,8 +128,9 @@ class ConfigsControllerTest {
     void getConfig_ShouldReturnConfigByName() throws Exception {
         // Given
         String configName = "default";
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName(configName);
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name(configName)
+                .build();
         when(configsService.getConfig(configName)).thenReturn(config);
 
         // When & Then
@@ -144,10 +146,11 @@ class ConfigsControllerTest {
         UpdateConfigRequest request = new UpdateConfigRequest();
         request.setEnabled(true);
         request.setJwtExpiration(1800000L);
-        AuthenticationConfig savedConfig = new AuthenticationConfig();
-        savedConfig.setName(configName);
-        savedConfig.setEnabled(true);
-        savedConfig.setJwtExpiration(1800000L);
+        AuthenticationConfig savedConfig = AuthenticationConfig.builder()
+                .name(configName)
+                .enabled(true)
+                .jwtExpiration(1800000L)
+                .build();
 
         when(configsService.saveConfig(any(UpdateConfigCommand.class))).thenReturn(savedConfig);
 

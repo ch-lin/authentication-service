@@ -123,8 +123,7 @@ public class ConfigsServiceImpl implements ConfigsService {
             authenticationConfigRepository.saveAll(enabledConfigs);
         }
 
-        AuthenticationConfig newConfig = new AuthenticationConfig();
-        newConfig.setName(configName);
+        AuthenticationConfig newConfig = new AuthenticationConfig(configName);
         newConfig.setEnabled(command.getEnabled());
         newConfig.setJwtExpiration(command.getJwtExpiration());
         newConfig.setJwtRefreshExpiration(command.getJwtRefreshExpiration());
@@ -201,9 +200,7 @@ public class ConfigsServiceImpl implements ConfigsService {
         AuthenticationConfig config = authenticationConfigRepository.findByName(configName)
                 .orElseGet(() -> {
                     logger.info("No configuration found with name '{}'. Creating a new one.", configName);
-                    AuthenticationConfig newConfig = new AuthenticationConfig();
-                    newConfig.setName(configName);
-                    return newConfig;
+                    return new AuthenticationConfig(configName);
                 });
 
         // Apply updates from the command

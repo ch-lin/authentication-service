@@ -45,20 +45,22 @@ class AuthenticationConfigRepositoryTest {
 
     @Test
     void findAllByEnabledTrue_ShouldReturnOnlyEnabledConfigs() {
-        AuthenticationConfig config1 = new AuthenticationConfig();
-        config1.setName("config1");
-        config1.setEnabled(true);
-        config1.setJwtExpiration(3600L);
-        config1.setJwtRefreshExpiration(7200L);
-        config1.setJwtIssuerUri("http://test");
+        AuthenticationConfig config1 = AuthenticationConfig.builder()
+                .name("config1")
+                .enabled(true)
+                .jwtExpiration(3600L)
+                .jwtRefreshExpiration(7200L)
+                .jwtIssuerUri("http://test")
+                .build();
         entityManager.persist(config1);
 
-        AuthenticationConfig config2 = new AuthenticationConfig();
-        config2.setName("config2");
-        config2.setEnabled(false);
-        config2.setJwtExpiration(3600L);
-        config2.setJwtRefreshExpiration(7200L);
-        config2.setJwtIssuerUri("http://test");
+        AuthenticationConfig config2 = AuthenticationConfig.builder()
+                .name("config2")
+                .enabled(false)
+                .jwtExpiration(3600L)
+                .jwtRefreshExpiration(7200L)
+                .jwtIssuerUri("http://test")
+                .build();
         entityManager.persist(config2);
         entityManager.flush();
 
@@ -70,12 +72,13 @@ class AuthenticationConfigRepositoryTest {
 
     @Test
     void findFirstByEnabledTrue_ShouldReturnEnabledConfig() {
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName("config1");
-        config.setEnabled(true);
-        config.setJwtExpiration(3600L);
-        config.setJwtRefreshExpiration(7200L);
-        config.setJwtIssuerUri("http://test");
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name("config1")
+                .enabled(true)
+                .jwtExpiration(3600L)
+                .jwtRefreshExpiration(7200L)
+                .jwtIssuerUri("http://test")
+                .build();
         entityManager.persist(config);
         entityManager.flush();
 
@@ -87,12 +90,13 @@ class AuthenticationConfigRepositoryTest {
 
     @Test
     void findByName_ShouldReturnConfig_WhenExists() {
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName("test-config");
-        config.setEnabled(true);
-        config.setJwtExpiration(3600L);
-        config.setJwtRefreshExpiration(7200L);
-        config.setJwtIssuerUri("http://test");
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name("test-config")
+                .enabled(true)
+                .jwtExpiration(3600L)
+                .jwtRefreshExpiration(7200L)
+                .jwtIssuerUri("http://test")
+                .build();
         entityManager.persist(config);
         entityManager.flush();
 
@@ -104,12 +108,13 @@ class AuthenticationConfigRepositoryTest {
 
     @Test
     void cleanTable_ShouldRemoveAllConfigs() {
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setName("cleanup-config");
-        config.setEnabled(true);
-        config.setJwtExpiration(3600L);
-        config.setJwtRefreshExpiration(7200L);
-        config.setJwtIssuerUri("http://test");
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .name("cleanup-config")
+                .enabled(true)
+                .jwtExpiration(3600L)
+                .jwtRefreshExpiration(7200L)
+                .jwtIssuerUri("http://test")
+                .build();
         entityManager.persist(config);
         entityManager.flush();
 

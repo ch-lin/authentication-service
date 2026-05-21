@@ -26,7 +26,6 @@ package ch.lin.authentication.service.backend.api.app.config;
 import org.springframework.stereotype.Component;
 
 import ch.lin.authentication.service.backend.api.domain.model.AuthenticationConfig;
-
 import lombok.NonNull;
 
 /**
@@ -48,6 +47,12 @@ public class DefaultConfigFactory {
      * @return A new, non-persisted {@link AuthenticationConfig} instance.
      */
     public AuthenticationConfig create(@NonNull AuthenticationDefaultProperties properties) {
-        return new AuthenticationConfig(properties.getName(), properties.getEnabled(), properties.getJwtExpiration(), properties.getJwtRefreshExpiration(), properties.getJwtIssuerUri());
+        return AuthenticationConfig.builder()
+                .name(properties.getName())
+                .enabled(properties.getEnabled())
+                .jwtExpiration(properties.getJwtExpiration())
+                .jwtRefreshExpiration(properties.getJwtRefreshExpiration())
+                .jwtIssuerUri(properties.getJwtIssuerUri())
+                .build();
     }
 }
