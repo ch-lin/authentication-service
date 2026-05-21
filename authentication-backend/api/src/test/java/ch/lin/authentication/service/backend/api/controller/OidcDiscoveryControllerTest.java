@@ -67,8 +67,9 @@ class OidcDiscoveryControllerTest {
     @Test
     @DisplayName("Should return OIDC configuration with correct issuer and jwks_uri")
     void openidConfiguration_ShouldReturnConfig() throws Exception {
-        AuthenticationConfig config = new AuthenticationConfig();
-        config.setJwtIssuerUri("http://localhost:8080");
+        AuthenticationConfig config = AuthenticationConfig.builder()
+                .jwtIssuerUri("http://localhost:8080")
+                .build();
 
         when(configsService.getResolvedConfig(null)).thenReturn(config);
 

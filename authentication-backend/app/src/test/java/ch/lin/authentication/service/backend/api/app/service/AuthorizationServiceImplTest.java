@@ -91,10 +91,11 @@ class AuthorizationServiceImplTest {
     @BeforeEach
     @SuppressWarnings("unused")
     void setUp() {
-        authConfig = new AuthenticationConfig();
-        authConfig.setJwtExpiration(3600000L); // 1 hour
-        authConfig.setJwtRefreshExpiration(7200000L); // 2 hours
-        authConfig.setJwtIssuerUri("http://test-issuer");
+        authConfig = AuthenticationConfig.builder()
+                .jwtExpiration(3600000L) // 1 hour
+                .jwtRefreshExpiration(7200000L) // 2 hours
+                .jwtIssuerUri("http://test-issuer")
+                .build();
     }
 
     @Test
