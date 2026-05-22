@@ -213,7 +213,7 @@ class ConfigsServiceImplTest {
 
         configsService.deleteConfig(configName);
 
-        verify(authenticationConfigRepository).delete(config);
+        verify(authenticationConfigRepository).delete(Objects.requireNonNull(config));
         assertThat(defaultConfig.getEnabled()).isTrue();
         verify(authenticationConfigRepository).save(Objects.requireNonNull(defaultConfig));
     }
@@ -244,7 +244,7 @@ class ConfigsServiceImplTest {
 
         configsService.deleteConfig(configName);
 
-        verify(authenticationConfigRepository).delete(config);
+        verify(authenticationConfigRepository).delete(Objects.requireNonNull(config));
         verify(authenticationConfigRepository, never()).findByName("default");
     }
 
@@ -262,7 +262,7 @@ class ConfigsServiceImplTest {
 
         configsService.deleteConfig(configName);
 
-        verify(authenticationConfigRepository).delete(config);
+        verify(authenticationConfigRepository).delete(Objects.requireNonNull(config));
         verify(authenticationConfigRepository).findByName("default");
         verify(authenticationConfigRepository, never()).save(Objects.requireNonNull(defaultConfig));
     }

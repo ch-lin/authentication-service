@@ -23,6 +23,7 @@
  *===========================================================================*/
 package ch.lin.authentication.service.backend.api.controller;
 
+import java.security.Principal;
 import java.util.Date;
 import java.util.Objects;
 
@@ -31,14 +32,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -54,6 +59,7 @@ import ch.lin.authentication.service.backend.api.dto.AuthenticationRequest;
 import ch.lin.authentication.service.backend.api.dto.ClientAuthenticationRequest;
 import ch.lin.authentication.service.backend.api.dto.ClientRegisterRequest;
 import ch.lin.authentication.service.backend.api.dto.RegisterRequest;
+import ch.lin.authentication.service.backend.api.dto.UpdatePasswordRequest;
 
 @ExtendWith(MockitoExtension.class)
 class AuthenticationControllerTest {
@@ -221,5 +227,85 @@ class AuthenticationControllerTest {
                 .andExpect(content().string("All users and clients have been deleted and sequences have been reset."));
 
         verify(authorizationService).cleanup();
+    }
+
+    @Test
+    void updatePassword_ShouldReturnOk_WhenValidRequest() throws Exception {
+        UpdatePasswordRequest request = new UpdatePasswordRequest("old", "new");
+        Principal principal = mock(Principal.class);
+        when(principal.getName()).thenReturn("test@example.com");
+
+        mockMvc.perform(put("/api/v1/auth/users/password")
+                .principal(principal)
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
+                .content(Objects.requireNonNull(objectMapper.writeValueAsString(request))))
+                .andExpect(status().isOk());
+
+        verify(authorizationService).updatePassword("test@example.com", "old", "new");
+    }
+
+    @Test
+    void updatePassword_ShouldReturnUnauthorized_WhenPrincipalNull() throws Exception {
+        UpdatePasswordRequest request = new UpdatePasswordRequest("old", "new");
+
+        mockMvc.perform(put("/api/v1/auth/users/password")
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
+                .content(Objects.requireNonNull(objectMapper.writeValueAsString(request))))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void updatePassword_ShouldReturnForbidden_WhenBadCredentials() throws Exception {
+        UpdatePasswordRequest request = new UpdatePasswordRequest("old", "new");
+        Principal principal = mock(Principal.class);
+        when(principal.getName()).thenReturn("test@example.com");
+
+        doThrow(new BadCredentialsException("Invalid old password"))
+                .when(authorizationService).updatePassword("test@example.com", "old", "new");
+
+        mockMvc.perform(put("/api/v1/auth/users/password")
+                .principal(principal)
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
+                .content(Objects.requireNonNull(objectMapper.writeValueAsString(request))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updatePassword_ShouldReturnBadRequest_WhenUserNotFound() throws Exception {
+        UpdatePasswordRequest request = new UpdatePasswordRequest("old", "new");
+        Principal principal = mock(Principal.class);
+        when(principal.getName()).thenReturn("test@example.com");
+
+        doThrow(new IllegalArgumentException("User not found"))
+                .when(authorizationService).updatePassword("test@example.com", "old", "new");
+
+        mockMvc.perform(put("/api/v1/auth/users/password")
+                .principal(principal)
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
+                .content(Objects.requireNonNull(objectMapper.writeValueAsString(request))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rotateClientSecret_ShouldReturnNewSecret_WhenValid() throws Exception {
+        String clientId = "client-123";
+        Client client = Client.builder().clientId(clientId).clientSecret("newRawSecret").build();
+
+        when(authorizationService.rotateClientSecret(clientId)).thenReturn(client);
+
+        mockMvc.perform(post("/api/v1/auth/clients/{clientId}/rotate-secret", clientId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clientId").value(clientId))
+                .andExpect(jsonPath("$.clientSecret").value("newRawSecret"));
+    }
+
+    @Test
+    void rotateClientSecret_ShouldReturnBadRequest_WhenClientNotFound() throws Exception {
+        String clientId = "invalid";
+
+        when(authorizationService.rotateClientSecret(clientId)).thenThrow(new IllegalArgumentException("Invalid client ID"));
+
+        mockMvc.perform(post("/api/v1/auth/clients/{clientId}/rotate-secret", clientId))
+                .andExpect(status().isBadRequest());
     }
 }

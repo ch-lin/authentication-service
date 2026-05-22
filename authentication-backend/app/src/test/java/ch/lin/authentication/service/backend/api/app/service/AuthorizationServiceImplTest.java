@@ -343,4 +343,74 @@ class AuthorizationServiceImplTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Invalid refresh token");
     }
+
+    @Test
+    void updatePassword_ShouldUpdateAndSave_WhenValid() {
+        String email = "test@example.com";
+        User user = User.builder()
+                .email(email)
+                .password("encodedOldPassword")
+                .build();
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("old", "encodedOldPassword")).thenReturn(true);
+        when(passwordEncoder.encode("new")).thenReturn("encodedNewPassword");
+
+        authorizationService.updatePassword(email, "old", "new");
+
+        assertThat(user.getPassword()).isEqualTo("encodedNewPassword");
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updatePassword_ShouldThrow_WhenUserNotFound() {
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authorizationService.updatePassword("test@example.com", "old", "new"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("User not found");
+    }
+
+    @Test
+    void updatePassword_ShouldThrow_WhenOldPasswordInvalid() {
+        String email = "test@example.com";
+        User user = User.builder().email(email).password("encodedOld").build();
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "encodedOld")).thenReturn(false);
+
+        assertThatThrownBy(() -> authorizationService.updatePassword(email, "wrong", "new"))
+                .isInstanceOf(org.springframework.security.authentication.BadCredentialsException.class)
+                .hasMessage("Invalid old password");
+    }
+
+    @Test
+    void rotateClientSecret_ShouldUpdateAndSave_WhenValid() {
+        String clientId = "client-123";
+        Client client = Client.builder()
+                .clientId(clientId)
+                .clientSecret("oldSecret")
+                .role(Role.SERVICE)
+                .build();
+
+        when(clientRepository.findByClientId(clientId)).thenReturn(Optional.of(client));
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedNewSecret");
+
+        Client result = authorizationService.rotateClientSecret(clientId);
+
+        assertThat(client.getClientSecret()).isEqualTo("encodedNewSecret");
+        verify(clientRepository).save(client);
+
+        assertThat(result.getClientId()).isEqualTo(clientId);
+        assertThat(result.getClientSecret()).isNotEqualTo("encodedNewSecret"); // Ensure returned secret is plain text
+        assertThat(result.getClientSecret()).isNotBlank();
+    }
+
+    @Test
+    void rotateClientSecret_ShouldThrow_WhenClientNotFound() {
+        when(clientRepository.findByClientId("invalid")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authorizationService.rotateClientSecret("invalid"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Invalid client ID");
+    }
 }

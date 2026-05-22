@@ -237,4 +237,13 @@ public class User extends AuditableEntity implements UserDetails {
         }
         this.role = newRole;
     }
+
+    /**
+     * Updates the user's password.
+     *
+     * @param newHashedPassword The new hashed password.
+     */
+    public void updatePassword(String newHashedPassword) {
+        this.password = newHashedPassword;
+    }
 }

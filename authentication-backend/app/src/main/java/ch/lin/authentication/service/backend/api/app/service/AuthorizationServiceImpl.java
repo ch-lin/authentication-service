@@ -139,7 +139,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 .password(passwordEncoder.encode(password))
                 .role(role)
                 .build();
-        userRepository.save(user);
+        userRepository.save(Objects.requireNonNull(user));
         JwtToken jwtToken = generateToken(user);
         return jwtToken;
     }
@@ -257,6 +257,38 @@ public class AuthorizationServiceImpl implements AuthorizationService {
         } catch (JwtException e) {
             throw new IllegalArgumentException("Invalid refresh token", e);
         }
+    }
+
+    /**
+     * Updates a user's password.
+     */
+    @Override
+    public void updatePassword(String email, String oldPassword, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new org.springframework.security.authentication.BadCredentialsException("Invalid old password");
+        }
+
+        user.updatePassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    /**
+     * Rotates a client's secret.
+     */
+    @Override
+    public Client rotateClientSecret(String clientId) {
+        Client client = clientRepository.findByClientId(clientId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid client ID"));
+
+        String newRawSecret = UUID.randomUUID().toString();
+        client.updateSecret(passwordEncoder.encode(newRawSecret));
+        clientRepository.save(client);
+
+        // Return the client with the raw secret for one-time display
+        return client.toBuilder().clientSecret(newRawSecret).build();
     }
 
     /**

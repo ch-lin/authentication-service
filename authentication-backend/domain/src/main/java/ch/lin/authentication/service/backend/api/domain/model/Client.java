@@ -142,4 +142,13 @@ public class Client extends AuditableEntity {
         }
         this.role = newRole;
     }
+
+    /**
+     * Updates the client's secret.
+     *
+     * @param newHashedSecret The new hashed client secret.
+     */
+    public void updateSecret(String newHashedSecret) {
+        this.clientSecret = newHashedSecret;
+    }
 }

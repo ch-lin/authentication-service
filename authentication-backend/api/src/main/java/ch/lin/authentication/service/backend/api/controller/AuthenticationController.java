@@ -23,13 +23,17 @@
  *===========================================================================*/
 package ch.lin.authentication.service.backend.api.controller;
 
+import java.security.Principal;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,6 +47,7 @@ import ch.lin.authentication.service.backend.api.dto.ClientAuthenticationRequest
 import ch.lin.authentication.service.backend.api.dto.ClientRegisterRequest;
 import ch.lin.authentication.service.backend.api.dto.ClientRegisterResponse;
 import ch.lin.authentication.service.backend.api.dto.RegisterRequest;
+import ch.lin.authentication.service.backend.api.dto.UpdatePasswordRequest;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
@@ -295,5 +300,81 @@ public class AuthenticationController {
         authorizationService.cleanup();
         logger.warn("Cleanup successful. All users and clients have been deleted and sequences have been reset.");
         return ResponseEntity.ok("All users and clients have been deleted and sequences have been reset.");
+    }
+
+    /**
+     * Updates the password for the currently authenticated user.
+     * <p>
+     * The user to update is implicitly determined from the JWT access token
+     * provided in the Authorization header.
+     *
+     * @param request The request containing the old and new password.
+     * @param principal The currently authenticated user's principal.
+     * @return A {@link ResponseEntity} indicating success or failure.
+     * <p>
+     * Example cURL request:
+     *
+     * <pre>{@code
+     * curl -X PUT http://localhost:8082/api/v1/auth/users/password \
+     * -H "Authorization: Bearer <your-access-token>" \
+     * -H "Content-Type: application/json" \
+     * -d '{
+     *   "oldPassword": "currentPassword123",
+     *   "newPassword": "newSecurePassword456"
+     * }'
+     * }</pre>
+     */
+    @PutMapping("/users/password")
+    public ResponseEntity<Void> updatePassword(@RequestBody UpdatePasswordRequest request, Principal principal) {
+        if (principal == null) {
+            logger.warn("Password update failed: Unauthorized access attempt.");
+            return ResponseEntity.status(401).build();
+        }
+
+        logger.info("Processing password update for user: {}", principal.getName());
+        try {
+            authorizationService.updatePassword(principal.getName(), request.oldPassword(), request.newPassword());
+            logger.info("Password updated successfully for user: {}", principal.getName());
+            return ResponseEntity.ok().build();
+        } catch (BadCredentialsException e) {
+            logger.warn("Password update failed for user {} due to invalid old password", principal.getName());
+            return ResponseEntity.status(403).build();
+        } catch (IllegalArgumentException e) {
+            logger.warn("Password update failed for user {}: {}", principal.getName(), e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    /**
+     * Rotates the client secret for a given client ID.
+     *
+     * @param clientId The ID of the client to rotate the secret for.
+     * @return A {@link ResponseEntity} containing the new client secret in
+     * plain text.
+     * <p>
+     * Example cURL request:
+     *
+     * <pre>{@code
+     * curl -X POST http://localhost:8082/api/v1/auth/clients/client-123/rotate-secret \
+     * -H "Authorization: Bearer <admin-access-token>"
+     * }</pre>
+     */
+    @PostMapping("/clients/{clientId}/rotate-secret")
+    public ResponseEntity<ClientRegisterResponse> rotateClientSecret(@PathVariable String clientId) {
+        logger.info("Processing secret rotation for client ID: {}", clientId);
+
+        try {
+            Client client = authorizationService.rotateClientSecret(clientId);
+
+            // Reusing ClientRegisterResponse as it fulfills the requirement to return 
+            // the clientId and the new plain text clientSecret.
+            ClientRegisterResponse response = new ClientRegisterResponse(client.getClientId(), client.getClientSecret());
+
+            logger.info("Secret rotated successfully for client ID: {}", clientId);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Secret rotation failed for client ID {}: {}", clientId, e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

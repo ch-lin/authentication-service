@@ -169,4 +169,17 @@ class UserTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> user.updateRole(null));
         assertEquals("User role cannot be null.", exception.getMessage());
     }
+
+    @Test
+    @DisplayName("Should successfully update password")
+    void updatePassword_Success() {
+        // Given
+        User user = User.builder().password("old_password").build();
+
+        // When
+        user.updatePassword("new_hashed_password");
+
+        // Then
+        assertEquals("new_hashed_password", user.getPassword());
+    }
 }
