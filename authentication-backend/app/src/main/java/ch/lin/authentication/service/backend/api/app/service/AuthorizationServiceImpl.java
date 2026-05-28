@@ -121,6 +121,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * Deletes all users and clients from the database. This is typically used
      * for testing or cleanup purposes.
      */
+    @Transactional
     @Override
     public void cleanup() {
         userRepository.cleanTable();
@@ -140,6 +141,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * @return A {@link JwtToken} containing the access and refresh tokens for
      * the newly registered user.
      */
+    @Transactional
     @Override
     public JwtToken register(String firstname, String lastname, String email, String password, Role role) {
         User user = User.builder()
@@ -163,6 +165,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * @return The registered {@link Client} with its raw, un-hashed client
      * secret.
      */
+    @Transactional
     @Override
     public Client registerClient(String clientName, Role role) {
         String clientId = UUID.randomUUID().toString();
@@ -333,6 +336,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     /**
      * Rotates a client's secret.
      */
+    @Transactional
     @Override
     public Client rotateClientSecret(String clientId) {
         Client client = clientRepository.findByClientId(clientId)

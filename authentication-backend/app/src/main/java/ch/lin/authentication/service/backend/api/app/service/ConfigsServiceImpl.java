@@ -86,6 +86,7 @@ public class ConfigsServiceImpl implements ConfigsService {
      * defaults to "default" as the active configuration name. It also ensures
      * the 'default' configuration is created if no configurations exist.
      */
+    @Transactional
     @Override
     public AllConfigsData getAllConfigs() {
         if (authenticationConfigRepository.count() == 0) {
@@ -137,6 +138,7 @@ public class ConfigsServiceImpl implements ConfigsService {
     /**
      * {@inheritDoc}
      */
+    @Transactional
     @Override
     public void deleteAllConfigs() {
         logger.info("Deleting all configurations.");
@@ -172,6 +174,7 @@ public class ConfigsServiceImpl implements ConfigsService {
     /**
      * {@inheritDoc}
      */
+    @Transactional
     @Override
     public AuthenticationConfig getConfig(String name) {
         return authenticationConfigRepository.findByName(name)
