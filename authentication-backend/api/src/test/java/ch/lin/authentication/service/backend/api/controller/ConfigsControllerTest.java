@@ -94,13 +94,15 @@ class ConfigsControllerTest {
     @Test
     void createConfig_ShouldCreateConfigAndReturnCreated() throws Exception {
         // Given
-        CreateConfigRequest request = new CreateConfigRequest("new-config", false, 3600000L, 86400000L, "http://issuer.com");
+        CreateConfigRequest request = new CreateConfigRequest("new-config", false, 3600000L, 86400000L, "http://issuer.com", 5, 15);
         AuthenticationConfig createdConfig = AuthenticationConfig.builder()
                 .name("new-config")
                 .enabled(false)
                 .jwtExpiration(3600000L)
                 .jwtRefreshExpiration(86400000L)
                 .jwtIssuerUri("http://issuer.com")
+                .maxFailedAttempts(5)
+                .lockoutDurationMinutes(15)
                 .build();
 
         when(configsService.createConfig(any(CreateConfigCommand.class))).thenReturn(createdConfig);
@@ -146,10 +148,14 @@ class ConfigsControllerTest {
         UpdateConfigRequest request = new UpdateConfigRequest();
         request.setEnabled(true);
         request.setJwtExpiration(1800000L);
+        request.setMaxFailedAttempts(10);
+        request.setLockoutDurationMinutes(30);
         AuthenticationConfig savedConfig = AuthenticationConfig.builder()
                 .name(configName)
                 .enabled(true)
                 .jwtExpiration(1800000L)
+                .maxFailedAttempts(10)
+                .lockoutDurationMinutes(30)
                 .build();
 
         when(configsService.saveConfig(any(UpdateConfigCommand.class))).thenReturn(savedConfig);

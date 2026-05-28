@@ -62,4 +62,14 @@ public class CreateConfigCommand {
      * system's default value will be used.
      */
     String jwtIssuerUri;
+
+    /**
+     * Maximum allowed failed password attempts before account lockout.
+     */
+    Integer maxFailedAttempts;
+
+    /**
+     * Account lockout duration in minutes.
+     */
+    Integer lockoutDurationMinutes;
 }

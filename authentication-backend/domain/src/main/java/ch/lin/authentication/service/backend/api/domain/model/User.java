@@ -23,6 +23,7 @@
  *===========================================================================*/
 package ch.lin.authentication.service.backend.api.domain.model;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -115,6 +116,11 @@ public class User extends AuditableEntity implements UserDetails {
     public static final String ROLE_COLUMN = "role";
 
     /**
+     * The name of the locked until column in the database.
+     */
+    public static final String LOCKED_UNTIL_COLUMN = "locked_until";
+
+    /**
      * The user's first name.
      */
     @NotNull
@@ -156,6 +162,13 @@ public class User extends AuditableEntity implements UserDetails {
     private Role role = Role.USER;
 
     /**
+     * The timestamp until which the user account is locked. Null if not locked.
+     */
+    @Column(name = User.LOCKED_UNTIL_COLUMN)
+    @Setter
+    private Instant lockedUntil;
+
+    /**
      * Returns the authorities granted to the user. In this implementation, it's
      * a single role.
      *
@@ -192,13 +205,16 @@ public class User extends AuditableEntity implements UserDetails {
     /**
      * Indicates whether the user is locked or unlocked. A locked user cannot be
      * authenticated.
+     * <p>
+     * Returns true if lockedUntil is null or if the current time is past the
+     * lockedUntil timestamp.
      *
-     * @return {@code true} because this implementation does not support account
-     * locking.
+     * @return {@code true} if the account is not locked, {@code false}
+     * otherwise.
      */
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return lockedUntil == null || Instant.now().isAfter(lockedUntil);
     }
 
     /**
@@ -245,5 +261,21 @@ public class User extends AuditableEntity implements UserDetails {
      */
     public void updatePassword(String newHashedPassword) {
         this.password = newHashedPassword;
+    }
+
+    /**
+     * Locks the user account until the specified time.
+     *
+     * @param unlockTime The time when the account should be unlocked.
+     */
+    public void lockAccount(Instant unlockTime) {
+        this.lockedUntil = unlockTime;
+    }
+
+    /**
+     * Unlocks the user account.
+     */
+    public void unlockAccount() {
+        this.lockedUntil = null;
     }
 }

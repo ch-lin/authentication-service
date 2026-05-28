@@ -76,6 +76,12 @@ public class DataInitializer {
     @Value("${AUTHENTICATION_DEFAULT_CONFIG_JWT_ISSUER_URI:http://authentication-backend:8080}")
     private String jwtIssuerUri;
 
+    @Value("${AUTHENTICATION_DEFAULT_CONFIG_MAX_FAILED_ATTEMPTS:5}")
+    private Integer maxFailedAttempts;
+
+    @Value("${AUTHENTICATION_DEFAULT_CONFIG_LOCKOUT_DURATION_MINUTES:15}")
+    private Integer lockoutDurationMinutes;
+
     @Bean
     @Transactional
     public CommandLineRunner initData() {
@@ -94,6 +100,7 @@ public class DataInitializer {
 
     private void initAdminUser() {
         if (adminPassword == null || adminPassword.isBlank()) {
+            log.warn("⚠️ Skipping Admin User creation: INIT_ADMIN_PASSWORD is not set or empty.");
             return;
         }
 
@@ -115,6 +122,7 @@ public class DataInitializer {
 
     private void initDownloaderClient() {
         if (downloaderClientId == null || downloaderClientId.isBlank()) {
+            log.warn("⚠️ Skipping Downloader Client creation: INIT_DOWNLOADER_CLIENT_ID is not set.");
             return;
         }
 
@@ -135,6 +143,7 @@ public class DataInitializer {
 
     private void initHubClient() {
         if (hubClientId == null || hubClientId.isBlank()) {
+            log.warn("⚠️ Skipping Hub Client creation: INIT_HUB_CLIENT_ID is not set.");
             return;
         }
 
@@ -156,6 +165,7 @@ public class DataInitializer {
 
     private void initPostmanClient() {
         if (postmanClientId == null || postmanClientId.isBlank()) {
+            log.warn("⚠️ Skipping Postman Client creation: INIT_POSTMAN_CLIENT_ID is not set.");
             return;
         }
 
@@ -188,6 +198,8 @@ public class DataInitializer {
                 .jwtExpiration(jwtExpiration)
                 .jwtRefreshExpiration(jwtRefreshExpiration)
                 .jwtIssuerUri(jwtIssuerUri)
+                .maxFailedAttempts(maxFailedAttempts)
+                .lockoutDurationMinutes(lockoutDurationMinutes)
                 .build();
 
         authConfigRepository.save(Objects.requireNonNull(config));

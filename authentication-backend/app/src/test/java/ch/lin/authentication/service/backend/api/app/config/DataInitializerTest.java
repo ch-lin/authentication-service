@@ -76,6 +76,8 @@ class DataInitializerTest {
         ReflectionTestUtils.setField(dataInitializer, "jwtExpiration", 900000L);
         ReflectionTestUtils.setField(dataInitializer, "jwtRefreshExpiration", 604800000L);
         ReflectionTestUtils.setField(dataInitializer, "jwtIssuerUri", "http://test-issuer");
+        ReflectionTestUtils.setField(dataInitializer, "maxFailedAttempts", 5);
+        ReflectionTestUtils.setField(dataInitializer, "lockoutDurationMinutes", 15);
     }
 
     @SuppressWarnings("null")
@@ -302,6 +304,8 @@ class DataInitializerTest {
         assertThat(savedConfig.getName()).isEqualTo("default");
         assertThat(savedConfig.getEnabled()).isTrue();
         assertThat(savedConfig.getJwtIssuerUri()).isEqualTo("http://test-issuer");
+        assertThat(savedConfig.getMaxFailedAttempts()).isEqualTo(5);
+        assertThat(savedConfig.getLockoutDurationMinutes()).isEqualTo(15);
     }
 
     @SuppressWarnings("null")

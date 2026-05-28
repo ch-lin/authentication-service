@@ -30,6 +30,7 @@ import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.doThrow;
@@ -39,6 +40,7 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -112,6 +114,51 @@ class AuthenticationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.access_token").value("accessToken"))
                 .andExpect(jsonPath("$.refresh_token").value("refreshToken"));
+    }
+
+    @Test
+    void authenticate_ShouldExtractIpFromXForwardedForHeader_WhenHeaderIsPresent() throws Exception {
+        AuthenticationRequest request = new AuthenticationRequest("john.doe@example.com", "password123");
+        JwtToken jwtToken = new JwtToken("accessToken", "refreshToken", new Date(), 3600L);
+
+        when(authorizationService.authenticate(eq(request.email()), eq(request.password())))
+                .thenReturn(jwtToken);
+
+        // Simulate a scenario where the request passes through a Proxy or Load Balancer with a list of original IPs
+        mockMvc.perform(post("/api/v1/auth/authenticate")
+                .header("X-Forwarded-For", "192.168.1.100, 10.0.0.1")
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
+                .content(Objects.requireNonNull(objectMapper.writeValueAsString(request))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void authenticate_ShouldFallbackToRemoteAddr_WhenXForwardedForHeaderIsEmpty() throws Exception {
+        AuthenticationRequest request = new AuthenticationRequest("john.doe@example.com", "password123");
+        JwtToken jwtToken = new JwtToken("accessToken", "refreshToken", new Date(), 3600L);
+
+        when(authorizationService.authenticate(eq(request.email()), eq(request.password())))
+                .thenReturn(jwtToken);
+
+        mockMvc.perform(post("/api/v1/auth/authenticate")
+                .header("X-Forwarded-For", "")
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
+                .content(Objects.requireNonNull(objectMapper.writeValueAsString(request))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void authenticate_ShouldReturnLocked_WhenAccountIsLocked() throws Exception {
+        AuthenticationRequest request = new AuthenticationRequest("john.doe@example.com", "password123");
+
+        when(authorizationService.authenticate(eq(request.email()), eq(request.password())))
+                .thenThrow(new LockedException("Account is locked"));
+
+        mockMvc.perform(post("/api/v1/auth/authenticate")
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
+                .content(Objects.requireNonNull(objectMapper.writeValueAsString(request))))
+                .andExpect(status().isLocked())
+                .andExpect(jsonPath("$.message").value("Account is locked. Please try again in 15 minutes."));
     }
 
     @Test
@@ -268,6 +315,23 @@ class AuthenticationControllerTest {
                 .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
                 .content(Objects.requireNonNull(objectMapper.writeValueAsString(request))))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updatePassword_ShouldReturnLocked_WhenAccountIsLocked() throws Exception {
+        UpdatePasswordRequest request = new UpdatePasswordRequest("old", "new");
+        Principal principal = mock(Principal.class);
+        when(principal.getName()).thenReturn("test@example.com");
+
+        doThrow(new LockedException("Account is locked"))
+                .when(authorizationService).updatePassword(eq("test@example.com"), eq("old"), eq("new"));
+
+        mockMvc.perform(put("/api/v1/auth/users/password")
+                .principal(principal)
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
+                .content(Objects.requireNonNull(objectMapper.writeValueAsString(request))))
+                .andExpect(status().isLocked())
+                .andExpect(jsonPath("$.message").value("Account is locked. Please try again in 15 minutes."));
     }
 
     @Test

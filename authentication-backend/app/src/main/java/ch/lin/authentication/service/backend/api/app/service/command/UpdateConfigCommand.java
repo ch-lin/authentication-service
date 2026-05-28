@@ -63,4 +63,16 @@ public class UpdateConfigCommand {
      * claim of the JWT. If null, the existing value is not changed.
      */
     String jwtIssuerUri;
+
+    /**
+     * An optional new value for max failed password attempts. If null, the
+     * existing value is not changed.
+     */
+    Integer maxFailedAttempts;
+
+    /**
+     * An optional new value for lockout duration in minutes. If null, the
+     * existing value is not changed.
+     */
+    Integer lockoutDurationMinutes;
 }

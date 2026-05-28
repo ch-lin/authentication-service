@@ -42,6 +42,8 @@ class AuthenticationDefaultPropertiesTest {
         assertNull(properties.getJwtExpiration());
         assertNull(properties.getJwtRefreshExpiration());
         assertNull(properties.getJwtIssuerUri());
+        assertNull(properties.getMaxFailedAttempts());
+        assertNull(properties.getLockoutDurationMinutes());
     }
 
     @Test
@@ -54,6 +56,8 @@ class AuthenticationDefaultPropertiesTest {
         Long jwtExpiration = 3600L;
         Long jwtRefreshExpiration = 7200L;
         String issuerUri = "https://api.example.com";
+        Integer maxFailedAttempts = 3;
+        Integer lockoutDurationMinutes = 10;
 
         // When
         properties.setName(name);
@@ -61,6 +65,8 @@ class AuthenticationDefaultPropertiesTest {
         properties.setJwtExpiration(jwtExpiration);
         properties.setJwtRefreshExpiration(jwtRefreshExpiration);
         properties.setJwtIssuerUri(issuerUri);
+        properties.setMaxFailedAttempts(maxFailedAttempts);
+        properties.setLockoutDurationMinutes(lockoutDurationMinutes);
 
         // Then
         assertEquals(name, properties.getName());
@@ -68,6 +74,8 @@ class AuthenticationDefaultPropertiesTest {
         assertEquals(jwtExpiration, properties.getJwtExpiration());
         assertEquals(jwtRefreshExpiration, properties.getJwtRefreshExpiration());
         assertEquals(issuerUri, properties.getJwtIssuerUri());
+        assertEquals(maxFailedAttempts, properties.getMaxFailedAttempts());
+        assertEquals(lockoutDurationMinutes, properties.getLockoutDurationMinutes());
     }
 
     @Test

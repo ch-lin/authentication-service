@@ -65,4 +65,12 @@ public class AuthenticationDefaultProperties {
      * configured in the application properties.
      */
     private String jwtIssuerUri;
+    /**
+     * Maximum allowed failed password attempts before account lockout.
+     */
+    private Integer maxFailedAttempts;
+    /**
+     * Account lockout duration in minutes.
+     */
+    private Integer lockoutDurationMinutes;
 }

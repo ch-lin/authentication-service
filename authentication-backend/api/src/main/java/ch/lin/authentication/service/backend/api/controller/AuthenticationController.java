@@ -24,11 +24,14 @@
 package ch.lin.authentication.service.backend.api.controller;
 
 import java.security.Principal;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -70,6 +73,17 @@ public class AuthenticationController {
 
     public AuthenticationController(AuthorizationService authorizationService) {
         this.authorizationService = authorizationService;
+    }
+
+    /**
+     * Utility to extract the client IP address from the request.
+     */
+    private String getClientIpAddress(HttpServletRequest request) {
+        String xForwardedForHeader = request.getHeader("X-Forwarded-For");
+        if (xForwardedForHeader == null || xForwardedForHeader.isEmpty()) {
+            return request.getRemoteAddr();
+        }
+        return xForwardedForHeader.split(",")[0].trim();
     }
 
     /**
@@ -125,14 +139,20 @@ public class AuthenticationController {
      * }</pre>
      */
     @PostMapping("/authenticate")
-    public ResponseEntity<AuthenticationResponse> authenticate(
-            @RequestBody AuthenticationRequest request) {
-        logger.info("Processing authentication for user: {}", request.email());
-        JwtToken jwtToken = authorizationService.authenticate(request.email(), request.password());
-        AuthenticationResponse response = new AuthenticationResponse(jwtToken.token(), jwtToken.refreshToken(),
-                BEARER_PREFIX.trim(), jwtToken.expiresIn());
-        logger.info("User authenticated successfully: {}", request.email());
-        return ResponseEntity.ok(response);
+    public ResponseEntity<?> authenticate(
+            @RequestBody AuthenticationRequest request, HttpServletRequest httpRequest) {
+        String ipAddress = getClientIpAddress(httpRequest);
+        logger.info("Processing authentication for user: {} from IP: {}", request.email(), ipAddress);
+        try {
+            JwtToken jwtToken = authorizationService.authenticate(request.email(), request.password());
+            AuthenticationResponse response = new AuthenticationResponse(jwtToken.token(), jwtToken.refreshToken(),
+                    BEARER_PREFIX.trim(), jwtToken.expiresIn());
+            logger.info("User authenticated successfully: {}", request.email());
+            return ResponseEntity.ok(response);
+        } catch (LockedException e) {
+            logger.warn("Authentication failed: Account {} is locked", request.email());
+            return ResponseEntity.status(HttpStatus.LOCKED).body(Map.of("message", "Account is locked. Please try again in 15 minutes."));
+        }
     }
 
     /**
@@ -325,22 +345,27 @@ public class AuthenticationController {
      * }</pre>
      */
     @PutMapping("/users/password")
-    public ResponseEntity<Void> updatePassword(@RequestBody UpdatePasswordRequest request, Principal principal) {
+    public ResponseEntity<?> updatePassword(@RequestBody UpdatePasswordRequest request, Principal principal, HttpServletRequest httpRequest) {
+        String ipAddress = getClientIpAddress(httpRequest);
         if (principal == null) {
-            logger.warn("Password update failed: Unauthorized access attempt.");
+            logger.warn("Password update failed: Unauthorized access attempt from IP: {}", ipAddress);
             return ResponseEntity.status(401).build();
         }
 
-        logger.info("Processing password update for user: {}", principal.getName());
+        String username = principal.getName();
+        logger.info("Processing password update for user: {} from IP: {}", username, ipAddress);
         try {
-            authorizationService.updatePassword(principal.getName(), request.oldPassword(), request.newPassword());
-            logger.info("Password updated successfully for user: {}", principal.getName());
+            authorizationService.updatePassword(username, request.oldPassword(), request.newPassword());
+            logger.info("Password updated successfully for user: {}", username);
             return ResponseEntity.ok().build();
+        } catch (LockedException e) {
+            logger.warn("Password update failed: Account {} is locked", username);
+            return ResponseEntity.status(HttpStatus.LOCKED).body(Map.of("message", "Account is locked. Please try again in 15 minutes."));
         } catch (BadCredentialsException e) {
-            logger.warn("Password update failed for user {} due to invalid old password", principal.getName());
+            logger.warn("Password update failed for user {} due to invalid old password", username);
             return ResponseEntity.status(403).build();
         } catch (IllegalArgumentException e) {
-            logger.warn("Password update failed for user {}: {}", principal.getName(), e.getMessage());
+            logger.warn("Password update failed for user {}: {}", username, e.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }
