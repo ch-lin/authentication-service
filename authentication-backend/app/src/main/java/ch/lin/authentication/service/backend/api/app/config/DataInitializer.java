@@ -32,6 +32,8 @@ public class DataInitializer {
     private final ClientRepository clientRepository;
     private final AuthenticationConfigRepository authConfigRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationDefaultProperties authDefaultProperties;
+    private final DefaultConfigFactory defaultConfigFactory;
 
     // --- Admin User ---
     @Value("${INIT_ADMIN_FIRSTNAME:admin}")
@@ -65,22 +67,6 @@ public class DataInitializer {
 
     @Value("${INIT_POSTMAN_CLIENT_SECRET:}")
     private String postmanClientSecret;
-
-    // --- JWT Config ---
-    @Value("${AUTHENTICATION_DEFAULT_CONFIG_JWT_EXPIRATION:900000}")
-    private Long jwtExpiration;
-
-    @Value("${AUTHENTICATION_DEFAULT_CONFIG_JWT_REFRESH_EXPIRATION:604800000}")
-    private Long jwtRefreshExpiration;
-
-    @Value("${AUTHENTICATION_DEFAULT_CONFIG_JWT_ISSUER_URI:http://authentication-backend:8080}")
-    private String jwtIssuerUri;
-
-    @Value("${AUTHENTICATION_DEFAULT_CONFIG_MAX_FAILED_ATTEMPTS:5}")
-    private Integer maxFailedAttempts;
-
-    @Value("${AUTHENTICATION_DEFAULT_CONFIG_LOCKOUT_DURATION_MINUTES:15}")
-    private Integer lockoutDurationMinutes;
 
     @Bean
     @Transactional
@@ -187,20 +173,12 @@ public class DataInitializer {
     }
 
     private void initDefaultConfig() {
-        String configName = "default";
+        String configName = authDefaultProperties.getName();
         if (authConfigRepository.findByName(configName).isPresent()) {
             return;
         }
 
-        AuthenticationConfig config = AuthenticationConfig.builder()
-                .name(configName)
-                .enabled(true)
-                .jwtExpiration(jwtExpiration)
-                .jwtRefreshExpiration(jwtRefreshExpiration)
-                .jwtIssuerUri(jwtIssuerUri)
-                .maxFailedAttempts(maxFailedAttempts)
-                .lockoutDurationMinutes(lockoutDurationMinutes)
-                .build();
+        AuthenticationConfig config = defaultConfigFactory.create(authDefaultProperties);
 
         authConfigRepository.save(Objects.requireNonNull(config));
         log.info("✅ Created Default Authentication Config.");

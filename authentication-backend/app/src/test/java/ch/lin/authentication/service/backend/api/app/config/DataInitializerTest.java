@@ -33,6 +33,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -59,25 +60,26 @@ class DataInitializerTest {
     private AuthenticationConfigRepository authConfigRepository;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private AuthenticationDefaultProperties authDefaultProperties;
+    @Mock
+    private DefaultConfigFactory defaultConfigFactory;
 
     private DataInitializer dataInitializer;
 
     @SuppressWarnings({"null", "unused"})
     @BeforeEach
     void setUp() {
-        dataInitializer = new DataInitializer(userRepository, clientRepository, authConfigRepository, passwordEncoder);
+        dataInitializer = new DataInitializer(userRepository, clientRepository, authConfigRepository, passwordEncoder, authDefaultProperties, defaultConfigFactory);
 
         // Set default values for Admin User (as they are usually present in properties)
         ReflectionTestUtils.setField(dataInitializer, "adminFirstname", "admin");
         ReflectionTestUtils.setField(dataInitializer, "adminLastname", "admin");
         ReflectionTestUtils.setField(dataInitializer, "adminEmail", "admin@example.com");
 
-        // Set default values for JWT Config
-        ReflectionTestUtils.setField(dataInitializer, "jwtExpiration", 900000L);
-        ReflectionTestUtils.setField(dataInitializer, "jwtRefreshExpiration", 604800000L);
-        ReflectionTestUtils.setField(dataInitializer, "jwtIssuerUri", "http://test-issuer");
-        ReflectionTestUtils.setField(dataInitializer, "maxFailedAttempts", 5);
-        ReflectionTestUtils.setField(dataInitializer, "lockoutDurationMinutes", 15);
+        // Setup default mock behavior for properties to prevent NPE during initData().run()
+        lenient().when(authDefaultProperties.getName()).thenReturn("default");
+        lenient().when(authConfigRepository.findByName("default")).thenReturn(Optional.of(AuthenticationConfig.builder().build()));
     }
 
     @SuppressWarnings("null")
@@ -293,6 +295,15 @@ class DataInitializerTest {
         // Given
         when(authConfigRepository.findByName("default")).thenReturn(Optional.empty());
 
+        AuthenticationConfig expectedConfig = AuthenticationConfig.builder()
+                .name("default")
+                .enabled(true)
+                .jwtIssuerUri("http://test-issuer")
+                .maxFailedAttempts(5)
+                .lockoutDurationMinutes(15)
+                .build();
+        when(defaultConfigFactory.create(authDefaultProperties)).thenReturn(expectedConfig);
+
         // When
         dataInitializer.initData().run();
 
@@ -319,6 +330,7 @@ class DataInitializerTest {
         dataInitializer.initData().run();
 
         // Then
+        verify(defaultConfigFactory, never()).create(any());
         verify(authConfigRepository, never()).save(any());
     }
 }
