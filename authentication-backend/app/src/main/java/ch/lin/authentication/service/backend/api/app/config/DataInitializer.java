@@ -32,6 +32,8 @@ public class DataInitializer {
     private final ClientRepository clientRepository;
     private final AuthenticationConfigRepository authConfigRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationDefaultProperties authDefaultProperties;
+    private final DefaultConfigFactory defaultConfigFactory;
 
     // --- Admin User ---
     @Value("${INIT_ADMIN_FIRSTNAME:admin}")
@@ -66,16 +68,6 @@ public class DataInitializer {
     @Value("${INIT_POSTMAN_CLIENT_SECRET:}")
     private String postmanClientSecret;
 
-    // --- JWT Config ---
-    @Value("${AUTHENTICATION_DEFAULT_CONFIG_JWT_EXPIRATION:900000}")
-    private Long jwtExpiration;
-
-    @Value("${AUTHENTICATION_DEFAULT_CONFIG_JWT_REFRESH_EXPIRATION:604800000}")
-    private Long jwtRefreshExpiration;
-
-    @Value("${AUTHENTICATION_DEFAULT_CONFIG_JWT_ISSUER_URI:http://authentication-backend:8080}")
-    private String jwtIssuerUri;
-
     @Bean
     @Transactional
     public CommandLineRunner initData() {
@@ -94,6 +86,7 @@ public class DataInitializer {
 
     private void initAdminUser() {
         if (adminPassword == null || adminPassword.isBlank()) {
+            log.warn("⚠️ Skipping Admin User creation: INIT_ADMIN_PASSWORD is not set or empty.");
             return;
         }
 
@@ -115,6 +108,7 @@ public class DataInitializer {
 
     private void initDownloaderClient() {
         if (downloaderClientId == null || downloaderClientId.isBlank()) {
+            log.warn("⚠️ Skipping Downloader Client creation: INIT_DOWNLOADER_CLIENT_ID is not set.");
             return;
         }
 
@@ -135,6 +129,7 @@ public class DataInitializer {
 
     private void initHubClient() {
         if (hubClientId == null || hubClientId.isBlank()) {
+            log.warn("⚠️ Skipping Hub Client creation: INIT_HUB_CLIENT_ID is not set.");
             return;
         }
 
@@ -156,6 +151,7 @@ public class DataInitializer {
 
     private void initPostmanClient() {
         if (postmanClientId == null || postmanClientId.isBlank()) {
+            log.warn("⚠️ Skipping Postman Client creation: INIT_POSTMAN_CLIENT_ID is not set.");
             return;
         }
 
@@ -177,18 +173,12 @@ public class DataInitializer {
     }
 
     private void initDefaultConfig() {
-        String configName = "default";
+        String configName = authDefaultProperties.getName();
         if (authConfigRepository.findByName(configName).isPresent()) {
             return;
         }
 
-        AuthenticationConfig config = AuthenticationConfig.builder()
-                .name(configName)
-                .enabled(true)
-                .jwtExpiration(jwtExpiration)
-                .jwtRefreshExpiration(jwtRefreshExpiration)
-                .jwtIssuerUri(jwtIssuerUri)
-                .build();
+        AuthenticationConfig config = defaultConfigFactory.create(authDefaultProperties);
 
         authConfigRepository.save(Objects.requireNonNull(config));
         log.info("✅ Created Default Authentication Config.");

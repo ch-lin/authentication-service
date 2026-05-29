@@ -23,11 +23,14 @@
  *===========================================================================*/
 package ch.lin.authentication.service.backend.api.domain.model;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DisplayName;
@@ -168,5 +171,62 @@ class UserTest {
         // When & Then
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> user.updateRole(null));
         assertEquals("User role cannot be null.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should successfully update password")
+    void updatePassword_Success() {
+        // Given
+        User user = User.builder().password("old_password").build();
+
+        // When
+        user.updatePassword("new_hashed_password");
+
+        // Then
+        assertEquals("new_hashed_password", user.getPassword());
+    }
+
+    @Test
+    @DisplayName("Should correctly lock and unlock the account")
+    void lockAndUnlockAccount() {
+        // Given
+        User user = User.builder().build();
+        Instant unlockTime = Instant.now().plusSeconds(60);
+
+        // When
+        user.lockAccount(unlockTime);
+
+        // Then
+        assertEquals(unlockTime, user.getLockedUntil());
+
+        // When
+        user.unlockAccount();
+
+        // Then
+        assertNull(user.getLockedUntil());
+    }
+
+    @Test
+    @DisplayName("isAccountNonLocked should return false for a locked account")
+    void isAccountNonLocked_ShouldReturnFalse_WhenLocked() {
+        // Given
+        User user = User.builder()
+                .lockedUntil(Instant.now().plusSeconds(300)) // Locked for 5 minutes
+                .build();
+
+        // When & Then
+        assertFalse(user.isAccountNonLocked());
+    }
+
+    @Test
+    @DisplayName("isAccountNonLocked should return true when lock has expired")
+    void isAccountNonLocked_ShouldReturnTrue_WhenLockExpired() {
+        // Given
+        User user = User.builder()
+                .lockedUntil(Instant.now().minusSeconds(1)) // Lock expired 1 second ago
+                .build();
+
+        // When & Then
+        assertTrue(user.isAccountNonLocked());
     }
 }

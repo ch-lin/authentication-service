@@ -36,6 +36,8 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -49,11 +51,14 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import ch.lin.authentication.service.backend.api.app.repository.ClientRepository;
+import ch.lin.authentication.service.backend.api.app.repository.FailedPasswordAttemptRepository;
 import ch.lin.authentication.service.backend.api.app.repository.UserRepository;
 import ch.lin.authentication.service.backend.api.domain.model.AuthenticationConfig;
 import ch.lin.authentication.service.backend.api.domain.model.Client;
+import ch.lin.authentication.service.backend.api.domain.model.FailedPasswordAttempt;
 import ch.lin.authentication.service.backend.api.domain.model.Role;
 import ch.lin.authentication.service.backend.api.domain.model.User;
 
@@ -74,6 +79,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     private final ClientRepository clientRepository;
     private final UserDetailsService userDetailsService;
     private final ConfigsService configsService;
+    private final FailedPasswordAttemptRepository failedPasswordAttemptRepository;
 
     /**
      * Constructs a new AuthorizationServiceImpl with the necessary
@@ -91,12 +97,15 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * @param userDetailsService The service for loading user-specific data.
      * @param configsService The service to fetch dynamic authentication
      * configuration.
+     * @param failedPasswordAttemptRepository The repository for tracking failed
+     * attempts.
      */
     public AuthorizationServiceImpl(JwtEncoder jwtEncoder, JwtDecoder jwtDecoder,
             UserRepository userRepository,
             AuthenticationManager authenticationManager,
             PasswordEncoder passwordEncoder,
-            ClientRepository clientRepository, UserDetailsService userDetailsService, ConfigsService configsService) {
+            ClientRepository clientRepository, UserDetailsService userDetailsService, ConfigsService configsService,
+            FailedPasswordAttemptRepository failedPasswordAttemptRepository) {
         this.jwtEncoder = jwtEncoder;
         this.jwtDecoder = jwtDecoder;
         this.userRepository = userRepository;
@@ -105,12 +114,14 @@ public class AuthorizationServiceImpl implements AuthorizationService {
         this.clientRepository = clientRepository;
         this.userDetailsService = userDetailsService;
         this.configsService = configsService;
+        this.failedPasswordAttemptRepository = failedPasswordAttemptRepository;
     }
 
     /**
      * Deletes all users and clients from the database. This is typically used
      * for testing or cleanup purposes.
      */
+    @Transactional
     @Override
     public void cleanup() {
         userRepository.cleanTable();
@@ -130,6 +141,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * @return A {@link JwtToken} containing the access and refresh tokens for
      * the newly registered user.
      */
+    @Transactional
     @Override
     public JwtToken register(String firstname, String lastname, String email, String password, Role role) {
         User user = User.builder()
@@ -139,7 +151,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 .password(passwordEncoder.encode(password))
                 .role(role)
                 .build();
-        userRepository.save(user);
+        userRepository.save(Objects.requireNonNull(user));
         JwtToken jwtToken = generateToken(user);
         return jwtToken;
     }
@@ -153,6 +165,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * @return The registered {@link Client} with its raw, un-hashed client
      * secret.
      */
+    @Transactional
     @Override
     public Client registerClient(String clientName, Role role) {
         String clientId = UUID.randomUUID().toString();
@@ -172,6 +185,31 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     }
 
     /**
+     * Handles failed password attempts, incrementing the counter and locking
+     * the account if threshold is reached.
+     */
+    private void handleFailedAttempt(String email) {
+        FailedPasswordAttempt attempt = failedPasswordAttemptRepository.findByUsername(email)
+                .orElse(FailedPasswordAttempt.builder().username(email).attemptCount(0).build());
+
+        attempt.setAttemptCount(attempt.getAttemptCount() + 1);
+        attempt.setLastAttemptTime(Instant.now());
+        failedPasswordAttemptRepository.save(attempt);
+
+        AuthenticationConfig config = configsService.getResolvedConfig(null);
+        int maxFailedAttempts = config.getMaxFailedAttempts();
+        int lockoutDurationMinutes = config.getLockoutDurationMinutes();
+
+        if (attempt.getAttemptCount() >= maxFailedAttempts) {
+            userRepository.findByEmail(email).ifPresent(user -> {
+                user.lockAccount(Instant.now().plus(lockoutDurationMinutes, ChronoUnit.MINUTES));
+                userRepository.save(user);
+                logger.warn("User account {} locked due to too many failed attempts", email);
+            });
+        }
+    }
+
+    /**
      * Authenticates a user with their email and password.
      *
      * @param email The user's email.
@@ -179,15 +217,26 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * @return A {@link JwtToken} containing the access and refresh tokens upon
      * successful authentication.
      */
+    @Transactional(noRollbackFor = BadCredentialsException.class)
     @Override
     public JwtToken authenticate(String email, String password) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        email,
-                        password));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        JwtToken jwtToken = generateToken(authentication);
-        return jwtToken;
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, password));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            failedPasswordAttemptRepository.deleteByUsername(email); // Reset on success
+
+            userRepository.findByEmail(email).ifPresent(user -> {
+                user.unlockAccount(); // Clear the lockedUntil state
+                userRepository.save(user);
+            });
+
+            return generateToken(authentication);
+        } catch (BadCredentialsException e) {
+            handleFailedAttempt(email);
+            throw e;
+        }
     }
 
     /**
@@ -257,6 +306,48 @@ public class AuthorizationServiceImpl implements AuthorizationService {
         } catch (JwtException e) {
             throw new IllegalArgumentException("Invalid refresh token", e);
         }
+    }
+
+    /**
+     * Updates a user's password.
+     */
+    @Transactional(noRollbackFor = BadCredentialsException.class)
+    @Override
+    public void updatePassword(String email, String oldPassword, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!user.isAccountNonLocked()) {
+            throw new LockedException("Account is locked");
+        }
+
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            handleFailedAttempt(email);
+            throw new BadCredentialsException("Invalid old password");
+        }
+
+        user.updatePassword(passwordEncoder.encode(newPassword));
+        user.unlockAccount(); // Clear the lockedUntil state
+        userRepository.save(user);
+
+        failedPasswordAttemptRepository.deleteByUsername(email); // Reset on success
+    }
+
+    /**
+     * Rotates a client's secret.
+     */
+    @Transactional
+    @Override
+    public Client rotateClientSecret(String clientId) {
+        Client client = clientRepository.findByClientId(clientId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid client ID"));
+
+        String newRawSecret = UUID.randomUUID().toString();
+        client.updateSecret(passwordEncoder.encode(newRawSecret));
+        clientRepository.save(client);
+
+        // Return the client with the raw secret for one-time display
+        return client.toBuilder().clientSecret(newRawSecret).build();
     }
 
     /**

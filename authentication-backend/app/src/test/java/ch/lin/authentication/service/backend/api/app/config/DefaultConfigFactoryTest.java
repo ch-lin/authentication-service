@@ -45,6 +45,8 @@ class DefaultConfigFactoryTest {
         properties.setJwtExpiration(1000L);
         properties.setJwtRefreshExpiration(2000L);
         properties.setJwtIssuerUri("http://test.com");
+        properties.setMaxFailedAttempts(3);
+        properties.setLockoutDurationMinutes(10);
 
         // When
         AuthenticationConfig config = factory.create(properties);
@@ -56,6 +58,8 @@ class DefaultConfigFactoryTest {
         assertEquals(properties.getJwtExpiration(), config.getJwtExpiration());
         assertEquals(properties.getJwtRefreshExpiration(), config.getJwtRefreshExpiration());
         assertEquals(properties.getJwtIssuerUri(), config.getJwtIssuerUri());
+        assertEquals(properties.getMaxFailedAttempts(), config.getMaxFailedAttempts());
+        assertEquals(properties.getLockoutDurationMinutes(), config.getLockoutDurationMinutes());
     }
 
     @Test

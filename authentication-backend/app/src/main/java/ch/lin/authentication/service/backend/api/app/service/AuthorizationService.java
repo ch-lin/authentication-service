@@ -102,4 +102,22 @@ public interface AuthorizationService {
      * expired.
      */
     JwtToken refreshClientToken(String refreshToken);
+
+    /**
+     * Updates a user's password.
+     *
+     * @param email The user's email.
+     * @param oldPassword The user's current raw password.
+     * @param newPassword The new raw password to set.
+     */
+    void updatePassword(String email, String oldPassword, String newPassword);
+
+    /**
+     * Rotates the secret for a client application.
+     *
+     * @param clientId The client's unique identifier.
+     * @return The updated {@link Client} with its new raw, un-hashed client
+     * secret.
+     */
+    Client rotateClientSecret(String clientId);
 }

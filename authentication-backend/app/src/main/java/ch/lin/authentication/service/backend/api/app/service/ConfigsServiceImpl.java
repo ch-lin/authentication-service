@@ -86,6 +86,7 @@ public class ConfigsServiceImpl implements ConfigsService {
      * defaults to "default" as the active configuration name. It also ensures
      * the 'default' configuration is created if no configurations exist.
      */
+    @Transactional
     @Override
     public AllConfigsData getAllConfigs() {
         if (authenticationConfigRepository.count() == 0) {
@@ -128,6 +129,8 @@ public class ConfigsServiceImpl implements ConfigsService {
         newConfig.setJwtExpiration(command.getJwtExpiration());
         newConfig.setJwtRefreshExpiration(command.getJwtRefreshExpiration());
         newConfig.setJwtIssuerUri(command.getJwtIssuerUri());
+        newConfig.setMaxFailedAttempts(command.getMaxFailedAttempts());
+        newConfig.setLockoutDurationMinutes(command.getLockoutDurationMinutes());
 
         return authenticationConfigRepository.save(newConfig);
     }
@@ -135,6 +138,7 @@ public class ConfigsServiceImpl implements ConfigsService {
     /**
      * {@inheritDoc}
      */
+    @Transactional
     @Override
     public void deleteAllConfigs() {
         logger.info("Deleting all configurations.");
@@ -170,6 +174,7 @@ public class ConfigsServiceImpl implements ConfigsService {
     /**
      * {@inheritDoc}
      */
+    @Transactional
     @Override
     public AuthenticationConfig getConfig(String name) {
         return authenticationConfigRepository.findByName(name)
@@ -215,6 +220,12 @@ public class ConfigsServiceImpl implements ConfigsService {
         }
         if (command.getJwtIssuerUri() != null) {
             config.setJwtIssuerUri(command.getJwtIssuerUri());
+        }
+        if (command.getMaxFailedAttempts() != null) {
+            config.setMaxFailedAttempts(command.getMaxFailedAttempts());
+        }
+        if (command.getLockoutDurationMinutes() != null) {
+            config.setLockoutDurationMinutes(command.getLockoutDurationMinutes());
         }
 
         AuthenticationConfig savedConfig = authenticationConfigRepository.save(Objects.requireNonNull(config));
@@ -279,6 +290,12 @@ public class ConfigsServiceImpl implements ConfigsService {
             }
             if (dbConfig.getJwtIssuerUri() == null) {
                 dbConfig.setJwtIssuerUri(defaultConfig.getJwtIssuerUri());
+            }
+            if (dbConfig.getMaxFailedAttempts() == null) {
+                dbConfig.setMaxFailedAttempts(defaultConfig.getMaxFailedAttempts());
+            }
+            if (dbConfig.getLockoutDurationMinutes() == null) {
+                dbConfig.setLockoutDurationMinutes(defaultConfig.getLockoutDurationMinutes());
             }
             return dbConfig;
         }).orElseGet(this::findOrCreateDefaultConfig);

@@ -51,6 +51,8 @@ class AuthenticationConfigRepositoryTest {
                 .jwtExpiration(3600L)
                 .jwtRefreshExpiration(7200L)
                 .jwtIssuerUri("http://test")
+                .maxFailedAttempts(5)
+                .lockoutDurationMinutes(15)
                 .build();
         entityManager.persist(config1);
 
@@ -60,6 +62,8 @@ class AuthenticationConfigRepositoryTest {
                 .jwtExpiration(3600L)
                 .jwtRefreshExpiration(7200L)
                 .jwtIssuerUri("http://test")
+                .maxFailedAttempts(5)
+                .lockoutDurationMinutes(15)
                 .build();
         entityManager.persist(config2);
         entityManager.flush();
@@ -78,6 +82,8 @@ class AuthenticationConfigRepositoryTest {
                 .jwtExpiration(3600L)
                 .jwtRefreshExpiration(7200L)
                 .jwtIssuerUri("http://test")
+                .maxFailedAttempts(5)
+                .lockoutDurationMinutes(15)
                 .build();
         entityManager.persist(config);
         entityManager.flush();
@@ -96,6 +102,8 @@ class AuthenticationConfigRepositoryTest {
                 .jwtExpiration(3600L)
                 .jwtRefreshExpiration(7200L)
                 .jwtIssuerUri("http://test")
+                .maxFailedAttempts(5)
+                .lockoutDurationMinutes(15)
                 .build();
         entityManager.persist(config);
         entityManager.flush();
@@ -114,6 +122,8 @@ class AuthenticationConfigRepositoryTest {
                 .jwtExpiration(3600L)
                 .jwtRefreshExpiration(7200L)
                 .jwtIssuerUri("http://test")
+                .maxFailedAttempts(5)
+                .lockoutDurationMinutes(15)
                 .build();
         entityManager.persist(config);
         entityManager.flush();

@@ -30,7 +30,7 @@ import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
 @TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:h2:mem:auth_test_db;DB_CLOSE_DELAY=-1",
+    "spring.datasource.url=jdbc:h2:mem:auth_test_db;DB_CLOSE_DELAY=-1;NON_KEYWORDS=USER",
     "spring.datasource.driver-class-name=org.h2.Driver",
     "spring.datasource.username=sa",
     "spring.datasource.password=",
@@ -53,7 +53,7 @@ class AuthenticationApplicationTest {
         // and also redirect the DB to an in-memory database.
         AuthenticationApplication.main(new String[]{
             "--spring.main.web-application-type=NONE",
-            "--spring.datasource.url=jdbc:h2:mem:auth_main_test_db",
+            "--spring.datasource.url=jdbc:h2:mem:auth_main_test_db;NON_KEYWORDS=USER",
             "--spring.datasource.driver-class-name=org.h2.Driver"
         });
     }

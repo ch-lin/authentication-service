@@ -102,6 +102,16 @@ public class AuthenticationConfig extends AuditableEntity {
     public static final String JWT_ISSUER_URI_COLUMN = "jwt_issuer_uri";
 
     /**
+     * The column name for maximum failed password attempts.
+     */
+    public static final String MAX_FAILED_ATTEMPTS_COLUMN = "max_failed_attempts";
+
+    /**
+     * The column name for the lockout duration in minutes.
+     */
+    public static final String LOCKOUT_DURATION_MINUTES_COLUMN = "lockout_duration_minutes";
+
+    /**
      * The unique name of the configuration profile, e.g., "default".
      */
     @NotNull
@@ -141,6 +151,22 @@ public class AuthenticationConfig extends AuditableEntity {
     @Column(name = AuthenticationConfig.JWT_ISSUER_URI_COLUMN, nullable = false)
     @Setter
     private String jwtIssuerUri;
+
+    /**
+     * Maximum allowed failed password attempts before account lockout.
+     */
+    @NotNull
+    @Column(name = AuthenticationConfig.MAX_FAILED_ATTEMPTS_COLUMN, nullable = false)
+    @Setter
+    private Integer maxFailedAttempts;
+
+    /**
+     * Account lockout duration in minutes.
+     */
+    @NotNull
+    @Column(name = AuthenticationConfig.LOCKOUT_DURATION_MINUTES_COLUMN, nullable = false)
+    @Setter
+    private Integer lockoutDurationMinutes;
 
     /**
      * Creates a new AuthenticationConfig with the specified name.

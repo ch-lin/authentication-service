@@ -69,4 +69,16 @@ public class CreateConfigRequest {
     @NotBlank(message = "JWT issuer URI cannot be blank.")
     private String jwtIssuerUri;
 
+    /**
+     * Maximum allowed failed password attempts before account lockout.
+     */
+    @NotNull(message = "Max failed attempts must be provided.")
+    private Integer maxFailedAttempts = 5;
+
+    /**
+     * Account lockout duration in minutes.
+     */
+    @NotNull(message = "Lockout duration minutes must be provided.")
+    private Integer lockoutDurationMinutes = 15;
+
 }

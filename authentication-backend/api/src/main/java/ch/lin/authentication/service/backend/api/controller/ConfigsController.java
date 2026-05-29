@@ -119,6 +119,8 @@ public class ConfigsController {
                 .jwtExpiration(request.getJwtExpiration())
                 .jwtRefreshExpiration(request.getJwtRefreshExpiration())
                 .jwtIssuerUri(request.getJwtIssuerUri())
+                .maxFailedAttempts(request.getMaxFailedAttempts())
+                .lockoutDurationMinutes(request.getLockoutDurationMinutes())
                 .build();
 
         AuthenticationConfig createdConfig = configsService.createConfig(command);
@@ -209,6 +211,8 @@ public class ConfigsController {
                 .jwtExpiration(request.getJwtExpiration())
                 .jwtRefreshExpiration(request.getJwtRefreshExpiration())
                 .jwtIssuerUri(request.getJwtIssuerUri())
+                .maxFailedAttempts(request.getMaxFailedAttempts())
+                .lockoutDurationMinutes(request.getLockoutDurationMinutes())
                 .build();
 
         AuthenticationConfig savedConfig = configsService.saveConfig(command);

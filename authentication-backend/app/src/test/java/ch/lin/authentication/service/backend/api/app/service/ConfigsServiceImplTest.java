@@ -78,6 +78,8 @@ class ConfigsServiceImplTest {
                 .jwtExpiration(3600L)
                 .jwtRefreshExpiration(7200L)
                 .jwtIssuerUri("http://test")
+                .maxFailedAttempts(5)
+                .lockoutDurationMinutes(15)
                 .build();
     }
 
@@ -213,7 +215,7 @@ class ConfigsServiceImplTest {
 
         configsService.deleteConfig(configName);
 
-        verify(authenticationConfigRepository).delete(config);
+        verify(authenticationConfigRepository).delete(Objects.requireNonNull(config));
         assertThat(defaultConfig.getEnabled()).isTrue();
         verify(authenticationConfigRepository).save(Objects.requireNonNull(defaultConfig));
     }
@@ -244,7 +246,7 @@ class ConfigsServiceImplTest {
 
         configsService.deleteConfig(configName);
 
-        verify(authenticationConfigRepository).delete(config);
+        verify(authenticationConfigRepository).delete(Objects.requireNonNull(config));
         verify(authenticationConfigRepository, never()).findByName("default");
     }
 
@@ -262,7 +264,7 @@ class ConfigsServiceImplTest {
 
         configsService.deleteConfig(configName);
 
-        verify(authenticationConfigRepository).delete(config);
+        verify(authenticationConfigRepository).delete(Objects.requireNonNull(config));
         verify(authenticationConfigRepository).findByName("default");
         verify(authenticationConfigRepository, never()).save(Objects.requireNonNull(defaultConfig));
     }
@@ -341,6 +343,8 @@ class ConfigsServiceImplTest {
                 .jwtExpiration(111L)
                 .jwtRefreshExpiration(222L)
                 .jwtIssuerUri("http://db-issuer")
+                .maxFailedAttempts(3)
+                .lockoutDurationMinutes(10)
                 .build();
 
         when(authenticationConfigRepository.findByName(configName)).thenReturn(Optional.of(config));
@@ -352,6 +356,8 @@ class ConfigsServiceImplTest {
         assertThat(result.getJwtExpiration()).isEqualTo(111L);
         assertThat(result.getJwtRefreshExpiration()).isEqualTo(222L);
         assertThat(result.getJwtIssuerUri()).isEqualTo("http://db-issuer");
+        assertThat(result.getMaxFailedAttempts()).isEqualTo(3);
+        assertThat(result.getLockoutDurationMinutes()).isEqualTo(10);
     }
 
     @Test
@@ -372,6 +378,8 @@ class ConfigsServiceImplTest {
         assertThat(result.getJwtExpiration()).isEqualTo(defaultConfig.getJwtExpiration());
         assertThat(result.getJwtRefreshExpiration()).isEqualTo(defaultConfig.getJwtRefreshExpiration());
         assertThat(result.getJwtIssuerUri()).isEqualTo(defaultConfig.getJwtIssuerUri());
+        assertThat(result.getMaxFailedAttempts()).isEqualTo(defaultConfig.getMaxFailedAttempts());
+        assertThat(result.getLockoutDurationMinutes()).isEqualTo(defaultConfig.getLockoutDurationMinutes());
     }
 
     @Test
@@ -480,6 +488,8 @@ class ConfigsServiceImplTest {
         when(command.getJwtExpiration()).thenReturn(5000L);
         when(command.getJwtRefreshExpiration()).thenReturn(10000L);
         when(command.getJwtIssuerUri()).thenReturn("http://new-issuer");
+        when(command.getMaxFailedAttempts()).thenReturn(10);
+        when(command.getLockoutDurationMinutes()).thenReturn(30);
 
         AuthenticationConfig existing = AuthenticationConfig.builder()
                 .name("existing")
@@ -487,6 +497,8 @@ class ConfigsServiceImplTest {
                 .jwtExpiration(1000L)
                 .jwtRefreshExpiration(2000L)
                 .jwtIssuerUri("http://old-issuer")
+                .maxFailedAttempts(5)
+                .lockoutDurationMinutes(15)
                 .build();
 
         when(authenticationConfigRepository.findByName("existing")).thenReturn(Optional.of(existing));
@@ -499,6 +511,8 @@ class ConfigsServiceImplTest {
         assertThat(result.getJwtExpiration()).isEqualTo(5000L);
         assertThat(result.getJwtRefreshExpiration()).isEqualTo(10000L);
         assertThat(result.getJwtIssuerUri()).isEqualTo("http://new-issuer");
+        assertThat(result.getMaxFailedAttempts()).isEqualTo(10);
+        assertThat(result.getLockoutDurationMinutes()).isEqualTo(30);
     }
 
     @Test
@@ -509,6 +523,8 @@ class ConfigsServiceImplTest {
         when(command.getJwtExpiration()).thenReturn(null);
         when(command.getJwtRefreshExpiration()).thenReturn(null);
         when(command.getJwtIssuerUri()).thenReturn(null);
+        when(command.getMaxFailedAttempts()).thenReturn(null);
+        when(command.getLockoutDurationMinutes()).thenReturn(null);
 
         AuthenticationConfig existing = AuthenticationConfig.builder()
                 .name("existing")
@@ -516,6 +532,8 @@ class ConfigsServiceImplTest {
                 .jwtExpiration(1000L)
                 .jwtRefreshExpiration(2000L)
                 .jwtIssuerUri("http://old-issuer")
+                .maxFailedAttempts(5)
+                .lockoutDurationMinutes(15)
                 .build();
 
         when(authenticationConfigRepository.findByName("existing")).thenReturn(Optional.of(existing));
@@ -528,6 +546,8 @@ class ConfigsServiceImplTest {
         assertThat(result.getJwtExpiration()).isEqualTo(1000L); // Should remain 1000L
         assertThat(result.getJwtRefreshExpiration()).isEqualTo(2000L); // Should remain 2000L
         assertThat(result.getJwtIssuerUri()).isEqualTo("http://old-issuer"); // Should remain old-issuer
+        assertThat(result.getMaxFailedAttempts()).isEqualTo(5); // Should remain 5
+        assertThat(result.getLockoutDurationMinutes()).isEqualTo(15); // Should remain 15
     }
 
     @Test

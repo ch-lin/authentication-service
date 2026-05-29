@@ -53,6 +53,8 @@ public class DefaultConfigFactory {
                 .jwtExpiration(properties.getJwtExpiration())
                 .jwtRefreshExpiration(properties.getJwtRefreshExpiration())
                 .jwtIssuerUri(properties.getJwtIssuerUri())
+                .maxFailedAttempts(properties.getMaxFailedAttempts())
+                .lockoutDurationMinutes(properties.getLockoutDurationMinutes())
                 .build();
     }
 }

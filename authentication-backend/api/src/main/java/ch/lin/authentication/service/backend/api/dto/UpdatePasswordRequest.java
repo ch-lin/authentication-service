@@ -23,49 +23,22 @@
  *===========================================================================*/
 package ch.lin.authentication.service.backend.api.dto;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
 
 /**
- * DTO for creating or updating a
- * {@link ch.lin.authentication.service.backend.api.domain.model.AuthenticationConfig}.
+ * Represents the request payload for updating an authenticated user's password.
  * <p>
- * This class represents the request body for the PATCH /configs/{name}
- * endpoint. Fields are optional to allow for partial updates.
+ * This Data Transfer Object (DTO) is utilized by the password update endpoint
+ * to securely transfer the user's current and new passwords. Both fields are
+ * mandatory and must not be blank.
+ *
+ * @param oldPassword The user's current, plain-text password for verification.
+ * @param newPassword The desired new plain-text password to be set.
  */
-@Getter
-@Setter
-@NoArgsConstructor
-public class UpdateConfigRequest {
+public record UpdatePasswordRequest(
+        @NotBlank(message = "Old password is required")
+        String oldPassword,
+        @NotBlank(message = "New password is required")
+        String newPassword) {
 
-    /**
-     * Indicates whether the configuration is enabled.
-     */
-    private Boolean enabled;
-
-    /**
-     * The expiration time for the JWT access token in milliseconds.
-     */
-    private Long jwtExpiration;
-
-    /**
-     * The expiration time for the JWT refresh token in milliseconds.
-     */
-    private Long jwtRefreshExpiration;
-
-    /**
-     * The issuer URI to be included in the 'iss' claim of the JWT.
-     */
-    private String jwtIssuerUri;
-
-    /**
-     * Maximum allowed failed password attempts before account lockout.
-     */
-    private Integer maxFailedAttempts;
-
-    /**
-     * Account lockout duration in minutes.
-     */
-    private Integer lockoutDurationMinutes;
 }

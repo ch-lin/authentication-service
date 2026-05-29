@@ -21,51 +21,37 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *===========================================================================*/
-package ch.lin.authentication.service.backend.api.dto;
+package ch.lin.authentication.service.backend.api.app.repository;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import java.util.Optional;
 
-/**
- * DTO for creating or updating a
- * {@link ch.lin.authentication.service.backend.api.domain.model.AuthenticationConfig}.
- * <p>
- * This class represents the request body for the PATCH /configs/{name}
- * endpoint. Fields are optional to allow for partial updates.
- */
-@Getter
-@Setter
-@NoArgsConstructor
-public class UpdateConfigRequest {
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import ch.lin.authentication.service.backend.api.domain.model.FailedPasswordAttempt;
+
+@Repository
+public interface FailedPasswordAttemptRepository extends JpaRepository<FailedPasswordAttempt, Long> {
 
     /**
-     * Indicates whether the configuration is enabled.
+     * Finds a failed password attempt record by username.
+     *
+     * @param username The username (or email).
+     * @return An Optional containing the record if found.
      */
-    private Boolean enabled;
+    Optional<FailedPasswordAttempt> findByUsername(String username);
 
     /**
-     * The expiration time for the JWT access token in milliseconds.
+     * Deletes all failed password attempt records for a specific username.
+     *
+     * @param username The username (or email) to clear records for.
      */
-    private Long jwtExpiration;
-
-    /**
-     * The expiration time for the JWT refresh token in milliseconds.
-     */
-    private Long jwtRefreshExpiration;
-
-    /**
-     * The issuer URI to be included in the 'iss' claim of the JWT.
-     */
-    private String jwtIssuerUri;
-
-    /**
-     * Maximum allowed failed password attempts before account lockout.
-     */
-    private Integer maxFailedAttempts;
-
-    /**
-     * Account lockout duration in minutes.
-     */
-    private Integer lockoutDurationMinutes;
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM FailedPasswordAttempt fpa WHERE fpa.username = :username")
+    void deleteByUsername(@Param("username") String username);
 }

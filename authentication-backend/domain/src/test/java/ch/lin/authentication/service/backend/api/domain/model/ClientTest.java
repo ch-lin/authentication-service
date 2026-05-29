@@ -135,4 +135,17 @@ class ClientTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> client.updateRole(null));
         assertEquals("Client role cannot be null.", exception.getMessage());
     }
+
+    @Test
+    @DisplayName("Should successfully update client secret")
+    void updateSecret_Success() {
+        // Given
+        Client client = Client.builder().clientSecret("old_secret").build();
+
+        // When
+        client.updateSecret("new_hashed_secret");
+
+        // Then
+        assertEquals("new_hashed_secret", client.getClientSecret());
+    }
 }
