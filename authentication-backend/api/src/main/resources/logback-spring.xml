@@ -26,6 +26,11 @@
     <!-- Include Spring Boot's default logback configuration for base setup. -->
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
+    <!-- Bridge properties from application.properties -->
+    <springProperty scope="context" name="LOGGING_DB_URL" source="LOGGING_DB_URL" defaultValue="jdbc:mysql://localhost:3306/central_logs?useSSL=false&amp;allowPublicKeyRetrieval=true" />
+    <springProperty scope="context" name="LOGGING_DB_USERNAME" source="LOGGING_DB_USERNAME" defaultValue="logger" />
+    <springProperty scope="context" name="LOGGING_DB_PASSWORD" source="LOGGING_DB_PASSWORD" />
+
     <!-- Define a property for the log file path. It uses environment variables or system properties
          with fallbacks, defaulting to a 'spring.log' file in the system's temp directory. -->
     <property name="LOG_FILE" value="${LOG_FILE:-${LOG_PATH:-${LOG_TEMP:-${java.io.tmpdir:-/tmp}}}/spring.log}"/>
@@ -33,10 +38,7 @@
     <!-- Appender for logging to the console (stdout). -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <!--
-            Pattern for console logs. Includes a timestamp, thread name, log level, logger name,
-            correlation ID from MDC for request tracing, the log message, and a newline.
-            -->
+            <!-- The key part is [%X{correlationId}] which prints the correlationId from MDC -->
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{correlationId}] - %msg%n</pattern>
         </encoder>
     </appender>
@@ -55,6 +57,30 @@
         </encoder>
     </appender>
 
+    <springProfile name="!test">
+        <!-- Database Appender for Central Logging -->
+        <appender name="DB" class="ch.qos.logback.classic.db.DBAppender">
+            <connectionSource class="ch.qos.logback.core.db.DriverManagerConnectionSource">
+                <!-- <dataSource class="com.mchange.v2.c3p0.ComboPooledDataSource"> -->
+                    <driverClass>com.mysql.cj.jdbc.Driver</driverClass>
+                    <!-- Read environment variables passed from Docker Compose -->
+                    <url>${LOGGING_DB_URL}</url>
+                    <user>${LOGGING_DB_USERNAME}</user>
+                    <password>${LOGGING_DB_PASSWORD}</password>
+                    <!-- <maximumPoolSize>3</maximumPoolSize> -->
+                <!-- </dataSource> -->
+            </connectionSource>
+            
+        </appender>
+
+        <!-- Wrap it in an Async Appender for performance -->
+        <appender name="ASYNC_DB" class="ch.qos.logback.classic.AsyncAppender">
+            <queueSize>512</queueSize>
+            <discardingThreshold>0</discardingThreshold>
+            <appender-ref ref="DB" />
+        </appender>
+    </springProfile>
+
     <!-- Set a specific log level for the application's packages.
          This is useful for getting more detailed logs from your own code during development
          without affecting the verbosity of third-party libraries. -->
@@ -67,5 +93,12 @@
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </root>
+
+    <!-- Add DB appender conditionally based on the active profile -->
+    <springProfile name="!test">
+        <root level="INFO">
+            <appender-ref ref="ASYNC_DB"/>
+        </root>
+    </springProfile>
 
 </configuration>
