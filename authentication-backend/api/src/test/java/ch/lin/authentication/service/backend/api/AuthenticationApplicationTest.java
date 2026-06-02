@@ -26,6 +26,7 @@ package ch.lin.authentication.service.backend.api;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
@@ -37,6 +38,7 @@ import org.springframework.test.context.TestPropertySource;
     "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
     "spring.jpa.hibernate.ddl-auto=create-drop"
 })
+@ActiveProfiles("test")
 class AuthenticationApplicationTest {
 
     @Test
