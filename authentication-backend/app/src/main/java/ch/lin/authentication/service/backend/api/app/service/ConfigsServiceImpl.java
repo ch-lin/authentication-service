@@ -94,10 +94,10 @@ public class ConfigsServiceImpl implements ConfigsService {
         }
         List<String> allNames = authenticationConfigRepository.findAll()
                 .stream()
-                .map(AuthenticationConfig::getName).collect(Collectors.toList());
+                .map(config -> config.getName()).collect(Collectors.toList());
 
         String enabledConfigName = authenticationConfigRepository.findFirstByEnabledTrue()
-                .map(AuthenticationConfig::getName)
+                .map(config -> config.getName())
                 .orElse("default"); // Fallback to 'default' if no config is explicitly enabled
         return new AllConfigsData(enabledConfigName, allNames);
     }

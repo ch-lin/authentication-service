@@ -40,7 +40,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -85,20 +84,26 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * Constructs a new AuthorizationServiceImpl with the necessary
      * dependencies.
      *
-     * @param jwtEncoder The encoder for creating JWTs.
-     * @param jwtDecoder The decoder for validating and parsing JWTs.
-     * @param userRepository The repository for user data access.
-     * @param authenticationManager The manager for handling authentication
-     * requests.
-     * @param passwordEncoder The encoder for hashing passwords and client
-     * secrets.
-     * @param clientRepository The repository for client application data
-     * access.
-     * @param userDetailsService The service for loading user-specific data.
-     * @param configsService The service to fetch dynamic authentication
-     * configuration.
+     * @param jwtEncoder                      The encoder for creating JWTs.
+     * @param jwtDecoder                      The decoder for validating and parsing
+     *                                        JWTs.
+     * @param userRepository                  The repository for user data access.
+     * @param authenticationManager           The manager for handling
+     *                                        authentication
+     *                                        requests.
+     * @param passwordEncoder                 The encoder for hashing passwords and
+     *                                        client
+     *                                        secrets.
+     * @param clientRepository                The repository for client application
+     *                                        data
+     *                                        access.
+     * @param userDetailsService              The service for loading user-specific
+     *                                        data.
+     * @param configsService                  The service to fetch dynamic
+     *                                        authentication
+     *                                        configuration.
      * @param failedPasswordAttemptRepository The repository for tracking failed
-     * attempts.
+     *                                        attempts.
      */
     public AuthorizationServiceImpl(JwtEncoder jwtEncoder, JwtDecoder jwtDecoder,
             UserRepository userRepository,
@@ -134,12 +139,12 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * Registers a new user in the system.
      *
      * @param firstname The user's first name.
-     * @param lastname The user's last name.
-     * @param email The user's email, used as the username.
-     * @param password The user's raw password.
-     * @param role The {@link Role} to assign to the user.
+     * @param lastname  The user's last name.
+     * @param email     The user's email, used as the username.
+     * @param password  The user's raw password.
+     * @param role      The {@link Role} to assign to the user.
      * @return A {@link JwtToken} containing the access and refresh tokens for
-     * the newly registered user.
+     *         the newly registered user.
      */
     @Transactional
     @Override
@@ -161,9 +166,9 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * being stored, but the raw secret is returned once for initial setup.
      *
      * @param clientName The name of the client application.
-     * @param role The {@link Role} to assign to the client.
+     * @param role       The {@link Role} to assign to the client.
      * @return The registered {@link Client} with its raw, un-hashed client
-     * secret.
+     *         secret.
      */
     @Transactional
     @Override
@@ -212,10 +217,10 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     /**
      * Authenticates a user with their email and password.
      *
-     * @param email The user's email.
+     * @param email    The user's email.
      * @param password The user's password.
      * @return A {@link JwtToken} containing the access and refresh tokens upon
-     * successful authentication.
+     *         successful authentication.
      */
     @Transactional(noRollbackFor = BadCredentialsException.class)
     @Override
@@ -242,10 +247,10 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     /**
      * Authenticates a client application with its client ID and client secret.
      *
-     * @param clientId The client's unique identifier.
+     * @param clientId     The client's unique identifier.
      * @param clientSecret The client's secret.
      * @return A {@link JwtToken} containing the access and refresh tokens upon
-     * successful authentication.
+     *         successful authentication.
      * @throws IllegalArgumentException if the client ID or secret is invalid.
      */
     @Override
@@ -266,9 +271,9 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      *
      * @param refreshToken The user's refresh token.
      * @return A new {@link JwtToken} containing a new access token and a new
-     * refresh token.
+     *         refresh token.
      * @throws IllegalArgumentException if the refresh token is invalid or
-     * expired.
+     *                                  expired.
      */
     @Override
     public JwtToken refreshUserToken(String refreshToken) {
@@ -288,9 +293,10 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      *
      * @param refreshToken The client's refresh token.
      * @return A new {@link JwtToken} containing a new access token and a new
-     * refresh token.
+     *         refresh token.
      * @throws IllegalArgumentException if the refresh token is invalid,
-     * expired, or belongs to a non-existent client.
+     *                                  expired, or belongs to a non-existent
+     *                                  client.
      */
     @Override
     public JwtToken refreshClientToken(String refreshToken) {
@@ -359,7 +365,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     private JwtToken generateToken(Authentication authentication) {
         return generateToken(authentication.getName(),
                 authentication.getAuthorities().stream()
-                        .map(GrantedAuthority::getAuthority)
+                        .map(auth -> auth.getAuthority())
                         .collect(Collectors.toList()));
     }
 
@@ -372,7 +378,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     private JwtToken generateToken(UserDetails userDetails) {
         return generateToken(userDetails.getUsername(),
                 userDetails.getAuthorities().stream()
-                        .map(GrantedAuthority::getAuthority)
+                        .map(auth -> auth.getAuthority())
                         .collect(Collectors.toList()));
     }
 
@@ -381,11 +387,11 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * specified roles.
      *
      * @param username The subject of the token (e.g., user's email or client's
-     * ID).
-     * @param roles The roles/authorities to include in the access token's
-     * claims.
+     *                 ID).
+     * @param roles    The roles/authorities to include in the access token's
+     *                 claims.
      * @return A {@link JwtToken} containing the newly created access and
-     * refresh tokens.
+     *         refresh tokens.
      */
     private JwtToken generateToken(String username, Iterable<String> roles) {
         AuthenticationConfig config = configsService.getResolvedConfig(null);
@@ -414,14 +420,15 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     /**
      * Creates a single JWT string with the given parameters.
      *
-     * @param subject The subject of the token.
-     * @param issuedAt The time the token is issued.
+     * @param subject   The subject of the token.
+     * @param issuedAt  The time the token is issued.
      * @param expiresAt The time the token expires.
-     * @param claims A map of custom claims to include in the token.
+     * @param claims    A map of custom claims to include in the token.
      * @param issuerUri The issuer URI for the 'iss' claim.
      * @return The encoded JWT as a string.
      */
-    private String createToken(String subject, Instant issuedAt, Instant expiresAt, Map<String, Object> claims, String issuerUri) {
+    private String createToken(String subject, Instant issuedAt, Instant expiresAt, Map<String, Object> claims,
+            String issuerUri) {
         JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder()
                 .subject(subject)
                 .issuer(issuerUri)

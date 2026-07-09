@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -82,7 +82,7 @@ class SecurityConfigTest {
 
         assertThat(token).isNotNull();
         assertThat(token.getAuthorities())
-                .extracting(GrantedAuthority::getAuthority)
+                .extracting(auth -> auth.getAuthority())
                 .contains("ROLE_USER", "ROLE_ADMIN");
     }
 
