@@ -156,7 +156,7 @@ public class AuthorizationServiceImpl implements AuthorizationService {
                 .password(passwordEncoder.encode(password))
                 .role(role)
                 .build();
-        userRepository.save(Objects.requireNonNull(user));
+        user = userRepository.save(Objects.requireNonNull(user));
         JwtToken jwtToken = generateToken(user);
         return jwtToken;
     }
@@ -279,9 +279,17 @@ public class AuthorizationServiceImpl implements AuthorizationService {
     public JwtToken refreshUserToken(String refreshToken) {
         try {
             var jwt = jwtDecoder.decode(refreshToken);
-            String username = jwt.getSubject();
+            String subject = jwt.getSubject();
 
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            UserDetails userDetails;
+            try {
+                Long userId = Long.valueOf(subject);
+                userDetails = userRepository.findById(Objects.requireNonNull(userId))
+                        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            } catch (NumberFormatException e) {
+                // Fallback for old tokens where subject is email
+                userDetails = userDetailsService.loadUserByUsername(subject);
+            }
             return generateToken(userDetails);
         } catch (JwtException e) {
             throw new IllegalArgumentException("Invalid refresh token", e);
@@ -363,7 +371,16 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * @return A {@link JwtToken} containing the access and refresh tokens.
      */
     private JwtToken generateToken(Authentication authentication) {
-        return generateToken(authentication.getName(),
+        Object principal = authentication.getPrincipal();
+        String subject;
+        if (principal instanceof User user) {
+            subject = String.valueOf(user.getId());
+        } else {
+            String type = principal != null ? principal.getClass().getName() : "null";
+            throw new IllegalArgumentException("Unsupported principal type: " + type);
+        }
+
+        return generateToken(subject,
                 authentication.getAuthorities().stream()
                         .map(auth -> auth.getAuthority())
                         .collect(Collectors.toList()));
@@ -376,7 +393,15 @@ public class AuthorizationServiceImpl implements AuthorizationService {
      * @return A {@link JwtToken} containing the access and refresh tokens.
      */
     private JwtToken generateToken(UserDetails userDetails) {
-        return generateToken(userDetails.getUsername(),
+        String subject;
+        if (userDetails instanceof User user) {
+            subject = String.valueOf(user.getId());
+        } else {
+            String type = userDetails != null ? userDetails.getClass().getName() : "null";
+            throw new IllegalArgumentException("Unsupported UserDetails type: " + type);
+        }
+
+        return generateToken(subject,
                 userDetails.getAuthorities().stream()
                         .map(auth -> auth.getAuthority())
                         .collect(Collectors.toList()));
