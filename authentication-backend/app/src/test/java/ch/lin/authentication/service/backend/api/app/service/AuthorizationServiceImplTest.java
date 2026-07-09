@@ -48,7 +48,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -127,6 +126,11 @@ class AuthorizationServiceImplTest {
         when(passwordEncoder.encode(password)).thenReturn("encodedPassword");
         when(configsService.getResolvedConfig(null)).thenReturn(authConfig);
 
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            return u.toBuilder().id(1L).build();
+        });
+
         Jwt jwtMock = mock(Jwt.class);
         when(jwtMock.getTokenValue()).thenReturn("mockToken");
         when(jwtEncoder.encode(any(JwtEncoderParameters.class))).thenReturn(jwtMock);
@@ -152,7 +156,7 @@ class AuthorizationServiceImplTest {
 
         // Assert on Access Token parameters (assuming it's the first call)
         JwtEncoderParameters accessTokenParams = allJwtParams.get(0);
-        assertThat(accessTokenParams.getClaims().getSubject()).isEqualTo(email);
+        assertThat(accessTokenParams.getClaims().getSubject()).isEqualTo("1");
         assertThat(accessTokenParams.getClaims().getIssuer().toString()).isEqualTo(authConfig.getJwtIssuerUri());
 
         // Assert on Refresh Token parameters (assuming it's the second call)
@@ -193,8 +197,12 @@ class AuthorizationServiceImplTest {
         // Arrange
         String email = "test@example.com";
         String password = "password";
+
+        User authUser = mock(User.class);
+        when(authUser.getId()).thenReturn(1L);
+
         Authentication auth = mock(Authentication.class);
-        when(auth.getName()).thenReturn(email);
+        when(auth.getPrincipal()).thenReturn(authUser);
         doReturn(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))).when(auth).getAuthorities();
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(auth);
@@ -217,13 +225,45 @@ class AuthorizationServiceImplTest {
         List<JwtEncoderParameters> allJwtParams = jwtParamsCaptor.getAllValues();
 
         JwtEncoderParameters accessTokenParams = allJwtParams.get(0);
-        assertThat(accessTokenParams.getClaims().getSubject()).isEqualTo(email);
+        assertThat(accessTokenParams.getClaims().getSubject()).isEqualTo("1");
         assertThat(accessTokenParams.getClaims().getIssuer().toString()).isEqualTo(authConfig.getJwtIssuerUri());
 
         assertThat(token.token()).isEqualTo("mockToken");
         verify(failedPasswordAttemptRepository).deleteByUsername(email);
         verify(user).unlockAccount();
         verify(userRepository).save(Objects.requireNonNull(user));
+    }
+
+    @Test
+    void authenticate_ShouldThrow_WhenPrincipalNotUser() {
+        String email = "test@example.com";
+        String password = "password";
+
+        org.springframework.security.core.userdetails.UserDetails genericUserDetails = mock(org.springframework.security.core.userdetails.UserDetails.class);
+        
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(genericUserDetails);
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(auth);
+
+        assertThatThrownBy(() -> authorizationService.authenticate(email, password))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unsupported principal type");
+    }
+
+    @Test
+    void authenticate_ShouldThrow_WhenPrincipalIsNull() {
+        String email = "test@example.com";
+        String password = "password";
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(null);
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(auth);
+
+        assertThatThrownBy(() -> authorizationService.authenticate(email, password))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unsupported principal type: null");
     }
 
     @Test
@@ -276,15 +316,37 @@ class AuthorizationServiceImplTest {
     void refreshUserToken_ShouldReturnNewToken() {
         // Arrange
         String refreshToken = "validRefresh";
-        String username = "user";
+        String userIdStr = "1";
+        Jwt decodedJwt = mock(Jwt.class);
+        when(decodedJwt.getSubject()).thenReturn(userIdStr);
+        when(jwtDecoder.decode(refreshToken)).thenReturn(decodedJwt);
+
+        User user = User.builder().id(1L).email("test@example.com").role(Role.USER).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        when(configsService.getResolvedConfig(null)).thenReturn(authConfig);
+        Jwt jwtMock = mock(Jwt.class);
+        when(jwtMock.getTokenValue()).thenReturn("newToken");
+        when(jwtEncoder.encode(any(JwtEncoderParameters.class))).thenReturn(jwtMock);
+
+        // Act
+        JwtToken token = authorizationService.refreshUserToken(refreshToken);
+
+        // Assert
+        assertThat(token.token()).isEqualTo("newToken");
+    }
+
+    @Test
+    void refreshUserToken_ShouldReturnNewToken_WithEmailFallback() {
+        // Arrange
+        String refreshToken = "validRefresh";
+        String username = "user@example.com";
         Jwt decodedJwt = mock(Jwt.class);
         when(decodedJwt.getSubject()).thenReturn(username);
         when(jwtDecoder.decode(refreshToken)).thenReturn(decodedJwt);
 
-        UserDetails userDetails = mock(UserDetails.class);
-        when(userDetails.getUsername()).thenReturn(username);
-        when(userDetails.getAuthorities()).thenReturn(Collections.emptyList());
-        when(userDetailsService.loadUserByUsername(username)).thenReturn(userDetails);
+        User user = User.builder().id(1L).email(username).role(Role.USER).build();
+        when(userDetailsService.loadUserByUsername(username)).thenReturn(user);
 
         when(configsService.getResolvedConfig(null)).thenReturn(authConfig);
         Jwt jwtMock = mock(Jwt.class);
@@ -306,6 +368,52 @@ class AuthorizationServiceImplTest {
         assertThatThrownBy(() -> authorizationService.refreshUserToken(refreshToken))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Invalid refresh token");
+    }
+
+    @Test
+    void refreshUserToken_ShouldThrow_WhenUserDetailsNotUser() {
+        String refreshToken = "validRefresh";
+        String username = "user@example.com";
+        Jwt decodedJwt = mock(Jwt.class);
+        when(decodedJwt.getSubject()).thenReturn(username);
+        when(jwtDecoder.decode(refreshToken)).thenReturn(decodedJwt);
+
+        org.springframework.security.core.userdetails.UserDetails genericUserDetails = mock(org.springframework.security.core.userdetails.UserDetails.class);
+        when(userDetailsService.loadUserByUsername(username)).thenReturn(genericUserDetails);
+
+        assertThatThrownBy(() -> authorizationService.refreshUserToken(refreshToken))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unsupported UserDetails type");
+    }
+
+    @Test
+    void refreshUserToken_ShouldThrow_WhenUserDetailsIsNull() {
+        String refreshToken = "validRefresh";
+        String username = "user@example.com";
+        Jwt decodedJwt = mock(Jwt.class);
+        when(decodedJwt.getSubject()).thenReturn(username);
+        when(jwtDecoder.decode(refreshToken)).thenReturn(decodedJwt);
+
+        when(userDetailsService.loadUserByUsername(username)).thenReturn(null);
+
+        assertThatThrownBy(() -> authorizationService.refreshUserToken(refreshToken))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unsupported UserDetails type: null");
+    }
+
+    @Test
+    void refreshUserToken_ShouldThrow_WhenUserNotFoundById() {
+        String refreshToken = "validRefresh";
+        String userIdStr = "999";
+        Jwt decodedJwt = mock(Jwt.class);
+        when(decodedJwt.getSubject()).thenReturn(userIdStr);
+        when(jwtDecoder.decode(refreshToken)).thenReturn(decodedJwt);
+
+        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authorizationService.refreshUserToken(refreshToken))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("User not found");
     }
 
     @Test
